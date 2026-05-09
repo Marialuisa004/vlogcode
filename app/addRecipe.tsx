@@ -1,33 +1,29 @@
 import React, { useState } from "react";
 import {
+  View,
   Text,
   TextInput,
-  StyleSheet,
   TouchableOpacity,
   Image,
   Alert,
+  StyleSheet,
   ScrollView,
 } from "react-native";
-
 import * as ImagePicker from "expo-image-picker";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-
 import { supabase } from "../lib/supabase";
-import { RootStackParamList } from "../types/recipe";
 
-type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, "AddRecipe">;
-};
-
-export default function AddRecipe({ navigation }: Props) {
+export default function AddRecipe({ navigation }: any) {
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("");
   const [ingredients, setIngredients] = useState("");
+  const [category, setCategory] = useState("");
   const [image, setImage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
+  // 📸 Pick Image
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
       quality: 1,
     });
 
@@ -36,75 +32,85 @@ export default function AddRecipe({ navigation }: Props) {
     }
   };
 
-  const uploadImage = async () => {
-    if (!image) return null;
+  // ☁️ Upload image to Supabase Storage
+  const uploadImage = async (uri: string) => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
 
-    try {
-      const response = await fetch(image);
-      const blob = await response.blob();
+    const fileName = `recipe-${Date.now()}.jpg`;
 
-      const fileName = `recipe-${Date.now()}.jpg`;
+    const { data, error } = await supabase.storage
+      .from("recipe-images")
+      .upload(fileName, blob, {
+        contentType: "image/jpeg",
+      });
 
-      const { error } = await supabase.storage
-        .from("recipe-images")
-        .upload(fileName, blob, {
-          contentType: "image/jpeg",
-        });
-
-      if (error) {
-        console.log("UPLOAD ERROR:", error);
-        return null;
-      }
-
-      const { data } = supabase.storage.from("recipe-images").getPublicUrl(
-        fileName
-      );
-
-      return data.publicUrl;
-    } catch (err) {
-      console.log(err);
+    if (error) {
+      console.log("UPLOAD ERROR:", error.message);
       return null;
     }
+
+    const { data: publicUrl } = supabase.storage
+      .from("recipe-images")
+      .getPublicUrl(fileName);
+
+    return publicUrl.publicUrl;
   };
 
+  // 💾 SAVE RECIPE
   const saveRecipe = async () => {
-    if (!title || !category || !ingredients || !image) {
+    if (!title || !ingredients || !category || !image) {
       Alert.alert("Please fill all fields");
       return;
     }
 
-    const imageUrl = await uploadImage();
+    setLoading(true);
 
-    const { error } = await supabase.from("recipes").insert([
-      {
+    try {
+      const imageUrl = await uploadImage(image);
+
+      if (!imageUrl) {
+        Alert.alert("Image upload failed");
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase.from("recipes").insert({
         title,
-        category,
         ingredients,
+        category,
         image: imageUrl,
-      },
-    ]);
+      });
 
-    if (error) {
-      console.log(error);
-      Alert.alert("Failed to save recipe");
-      return;
+      console.log("INSERT DATA:", data);
+      console.log("INSERT ERROR:", error);
+
+      if (error) {
+        Alert.alert("Save failed", error.message);
+      } else {
+        Alert.alert("Success", "Recipe saved!");
+
+        // reset form
+        setTitle("");
+        setIngredients("");
+        setCategory("");
+        setImage(null);
+
+        navigation.goBack();
+      }
+    } catch (err) {
+      console.log("ERROR:", err);
+      Alert.alert("Something went wrong");
     }
 
-    Alert.alert("Recipe Saved!");
-
-    setTitle("");
-    setCategory("");
-    setIngredients("");
-    setImage(null);
-
-    // Go back to Home tab/screen
-    navigation.navigate("Home");
+    setLoading(false);
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.header}>Add Recipe</Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>Add Recipe 🍲</Text>
 
+      {/* TITLE */}
       <TextInput
         placeholder="Recipe Title"
         value={title}
@@ -112,29 +118,39 @@ export default function AddRecipe({ navigation }: Props) {
         style={styles.input}
       />
 
+      {/* INGREDIENTS */}
       <TextInput
-        placeholder="Category"
+        placeholder="Ingredients"
+        value={ingredients}
+        onChangeText={setIngredients}
+        style={[styles.input, { height: 100 }]}
+        multiline
+      />
+
+      {/* CATEGORY */}
+      <TextInput
+        placeholder="Category (Dessert, Lunch, etc.)"
         value={category}
         onChangeText={setCategory}
         style={styles.input}
       />
 
-      <TextInput
-        placeholder="Ingredients"
-        value={ingredients}
-        onChangeText={setIngredients}
-        multiline
-        style={[styles.input, styles.ingredientsInput]}
-      />
-
-      <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
-        <Text style={styles.imageButtonText}>Pick Image</Text>
+      {/* IMAGE */}
+      <TouchableOpacity onPress={pickImage} style={styles.imageBtn}>
+        <Text style={{ color: "white" }}>Pick Image</Text>
       </TouchableOpacity>
 
-      {image && <Image source={{ uri: image }} style={styles.previewImage} />}
+      {image && <Image source={{ uri: image }} style={styles.image} />}
 
-      <TouchableOpacity style={styles.saveButton} onPress={saveRecipe}>
-        <Text style={styles.saveButtonText}>Save Recipe</Text>
+      {/* SAVE BUTTON */}
+      <TouchableOpacity
+        onPress={saveRecipe}
+        style={styles.saveBtn}
+        disabled={loading}
+      >
+        <Text style={{ color: "white" }}>
+          {loading ? "Saving..." : "Save Recipe"}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -142,66 +158,37 @@ export default function AddRecipe({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: "#fff",
     padding: 20,
   },
-
-  header: {
-    fontSize: 28,
+  title: {
+    fontSize: 22,
     fontWeight: "bold",
-    color: "#d35400",
-    marginBottom: 25,
-    marginTop: 30,
+    marginBottom: 20,
   },
-
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 12,
-    padding: 14,
+    borderColor: "#ccc",
+    padding: 10,
     marginBottom: 15,
-    backgroundColor: "#fafafa",
+    borderRadius: 8,
   },
-
-  ingredientsInput: {
-    height: 120,
-    textAlignVertical: "top",
-  },
-
-  imageButton: {
-    backgroundColor: "#d35400",
-    padding: 15,
-    borderRadius: 12,
+  imageBtn: {
+    backgroundColor: "#333",
+    padding: 12,
     alignItems: "center",
-    marginBottom: 20,
+    borderRadius: 8,
+    marginBottom: 10,
   },
-
-  imageButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-
-  previewImage: {
+  image: {
     width: "100%",
-    height: 220,
-    borderRadius: 15,
-    marginBottom: 20,
+    height: 200,
+    borderRadius: 10,
+    marginBottom: 15,
   },
-
-  saveButton: {
-    backgroundColor: "#e67e22",
-    padding: 18,
-    borderRadius: 15,
+  saveBtn: {
+    backgroundColor: "green",
+    padding: 15,
     alignItems: "center",
-    marginBottom: 40,
-  },
-
-  saveButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
+    borderRadius: 8,
   },
 });
-
