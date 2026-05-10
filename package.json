@@ -22,7 +22,7 @@
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
     "react-native-dotenv": "^3.4.11",
-    "react-native-gesture-handler": "^2.31.2",
+    "react-native-gesture-handler": "~2.28.0",
     "react-native-masonry-list": "^2.16.2",
     "react-native-paper": "^5.15.2",
     "react-native-reanimated": "~4.1.1",

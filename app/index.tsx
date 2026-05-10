@@ -46,7 +46,7 @@ export default function HomeScreen() {
     count: grouped[key].length,
   }));
 
-const styles = StyleSheet.create({
+  const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -84,4 +84,3 @@ const styles = StyleSheet.create({
     </SafeAreaView>
   );
 }
-

@@ -1,58 +1,74 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  ImageBackground,
-  StyleSheet,
-  TouchableOpacity,
-} from 'react-native';
+import React from "react";
+import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
 
-type Props = {
+type CategoryCardProps = {
   title: string;
-  image: string;
+  image?: string | null;
   count: number;
+  onPress?: () => void;
 };
 
 export default function CategoryCard({
   title,
   image,
   count,
-}: Props) {
+  onPress,
+}: CategoryCardProps) {
   return (
-    <TouchableOpacity style={styles.container}>
-      <ImageBackground
-        source={{ uri: image }}
-        style={styles.image}
-      >
-        <View style={styles.overlay}>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.count}>{count}</Text>
-        </View>
-      </ImageBackground>
+    <TouchableOpacity
+      style={styles.card}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      {image ? (
+        <Image source={{ uri: image }} style={styles.image} />
+      ) : (
+        <View style={[styles.image, styles.imageFallback]} />
+      )}
+
+      <View style={styles.content}>
+        <Text style={styles.title} numberOfLines={1}>
+          {title}
+        </Text>
+        <Text style={styles.count}>
+          {count} recipe{count === 1 ? "" : "s"}
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    width: '48%',
-    marginBottom: 10,
+  card: {
+    width: "48%",
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    overflow: "hidden",
+    marginBottom: 15,
+    elevation: 3,
   },
   image: {
-    height: 140,
-    justifyContent: 'flex-end',
+    width: "100%",
+    height: 120,
+    backgroundColor: "#eee",
   },
-  overlay: {
-    backgroundColor: '#d35400',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 6,
+  imageFallback: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  content: {
+    padding: 12,
   },
   title: {
-    color: 'white',
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 6,
   },
   count: {
-    color: 'white',
+    fontSize: 13,
+    color: "#777",
+    fontWeight: "600",
   },
 });
+
