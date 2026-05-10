@@ -1,164 +1,170 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   FlatList,
   Image,
-  TouchableOpacity,
   StyleSheet,
-} from "react-native";
-import { supabase } from "../lib/supabase";
+  TouchableOpacity,
+} from 'react-native';
+
+import { supabase } from '../lib/supabase';
 
 type Recipe = {
   id: string;
   title: string;
   ingredients: string;
-  image: string;
   category: string;
+  image: string;
 };
 
-const categories = ["All", "Dessert", "Lunch", "Breakfast", "Dinner"];
+type Props = {
+  onLogout: () => void;
+};
 
-export default function Home({ navigation }: any) {
+export default function Home({ onLogout }: Props) {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState("All");
-
-  // 📥 FETCH RECIPES (FIXED)
-  const fetchRecipes = async () => {
-    let query = supabase.from("recipes").select("*");
-
-    if (selectedCategory !== "All") {
-      query = query.eq("category", selectedCategory);
-    }
-
-    const { data, error } = await query.order("id", { ascending: false });
-
-    console.log("DATA:", data);
-    console.log("ERROR:", error);
-
-    if (error) {
-      console.log("Fetch error:", error.message);
-      return;
-    }
-
-    setRecipes(data || []);
-  };
 
   useEffect(() => {
     fetchRecipes();
-  }, [selectedCategory]);
+  }, []);
 
-  // 🗑 DELETE
-  const deleteRecipe = async (id: string) => {
-    const { error } = await supabase.from("recipes").delete().eq("id", id);
+  const fetchRecipes = async () => {
+    const { data, error } = await supabase
+      .from('recipes')
+      .select('*');
 
-    if (!error) {
-      fetchRecipes();
-    } else {
-      console.log(error.message);
+    console.log('DATA:', data);
+    console.log('ERROR:', error);
+
+    if (data) {
+      setRecipes(data);
     }
   };
 
+  const deleteRecipe = async (id: string) => {
+    const { error } = await supabase
+      .from('recipes')
+      .delete()
+      .eq('id', id);
+
+    if (!error) {
+      fetchRecipes();
+    }
+  };
+
+  const renderItem = ({ item }: { item: Recipe }) => (
+    <View style={styles.card}>
+      <Image source={{ uri: item.image }} style={styles.image} />
+
+      <Text style={styles.title}>{item.title}</Text>
+
+      <Text style={styles.category}>
+        Category: {item.category}
+      </Text>
+
+      <Text style={styles.ingredients}>
+        {item.ingredients}
+      </Text>
+
+      <TouchableOpacity
+        style={styles.deleteButton}
+        onPress={() => deleteRecipe(item.id)}
+      >
+        <Text style={styles.deleteText}>Delete</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Recipes 🍲</Text>
+      {/* LOGOUT BUTTON */}
+      <TouchableOpacity
+        onPress={onLogout}
+        style={styles.logoutButton}
+      >
+        <Text style={styles.logoutText}>Logout</Text>
+      </TouchableOpacity>
 
-      {/* CATEGORY FILTER */}
-      <FlatList
-        horizontal
-        data={categories}
-        keyExtractor={(item) => item}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() => setSelectedCategory(item)}
-            style={[
-              styles.category,
-              selectedCategory === item && styles.activeCategory,
-            ]}
-          >
-            <Text>{item}</Text>
-          </TouchableOpacity>
-        )}
-      />
+      <Text style={styles.heading}>🍲 My Recipes</Text>
 
-      {/* RECIPES */}
       <FlatList
         data={recipes}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Image source={{ uri: item.image }} style={styles.image} />
-
-            <Text style={styles.name}>{item.title}</Text>
-            <Text>{item.category}</Text>
-
-            <TouchableOpacity
-              onPress={() => navigation.navigate("EditRecipe", { recipe: item })}
-              style={styles.edit}
-            >
-              <Text>Edit</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => deleteRecipe(item.id)}
-              style={styles.delete}
-            >
-              <Text style={{ color: "white" }}>Delete</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        renderItem={renderItem}
+        showsVerticalScrollIndicator={false}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 15 },
-  title: { fontSize: 22, fontWeight: "bold", marginBottom: 10 },
-
-  category: {
-    padding: 10,
-    backgroundColor: "#eee",
-    marginRight: 10,
-    borderRadius: 20,
+  container: {
+    flex: 1,
+    padding: 15,
+    backgroundColor: '#f2f2f2',
   },
 
-  activeCategory: {
-    backgroundColor: "#ffd700",
+  heading: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+
+  logoutButton: {
+    backgroundColor: 'red',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 15,
+  },
+
+  logoutText: {
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: 'bold',
   },
 
   card: {
-    marginTop: 15,
-    padding: 10,
-    borderWidth: 1,
-    borderRadius: 10,
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 15,
+    elevation: 3,
   },
 
   image: {
-    width: "100%",
-    height: 150,
+    width: '100%',
+    height: 200,
     borderRadius: 10,
+    marginBottom: 10,
   },
 
-  name: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginTop: 5,
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
   },
 
-  delete: {
-    backgroundColor: "red",
-    padding: 8,
-    marginTop: 5,
-    borderRadius: 5,
-    alignItems: "center",
+  category: {
+    fontSize: 16,
+    color: 'green',
+    marginVertical: 5,
   },
 
-  edit: {
-    backgroundColor: "#ddd",
-    padding: 8,
-    marginTop: 5,
-    borderRadius: 5,
-    alignItems: "center",
+  ingredients: {
+    fontSize: 15,
+    color: '#555',
+    marginBottom: 10,
+  },
+
+  deleteButton: {
+    backgroundColor: 'red',
+    padding: 10,
+    borderRadius: 8,
+  },
+
+  deleteText: {
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: 'bold',
   },
 });

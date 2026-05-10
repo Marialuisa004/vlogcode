@@ -1,46 +1,59 @@
-import 'react-native-gesture-handler';
+import React, { useState } from 'react';
 
-import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
-import HomeScreen from './app/Home';
-import AddRecipeScreen from './app/addRecipe';
-
-import { Ionicons } from '@expo/vector-icons';
+import Home from './app/Home';
+import AddRecipe from './app/addRecipe';
+import Login from './app/Login';
+import Register from './app/Register';
 
 const Tab = createBottomTabNavigator();
 
 export default function App() {
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
+
+  // ---------------- NOT LOGGED IN ----------------
+  if (!loggedIn) {
+    // REGISTER SCREEN
+    if (showRegister) {
+      return (
+        <Register
+          onBackToLogin={() => setShowRegister(false)}
+        />
+      );
+    }
+
+    // LOGIN SCREEN
+    return (
+      <Login
+        onLogin={() => setLoggedIn(true)}
+        onGoToRegister={() => setShowRegister(true)}
+      />
+    );
+  }
+
+  // ---------------- MAIN APP ----------------
   return (
     <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: '#d35400',
-        }}
-      >
-        <Tab.Screen
-          name="Home"
-          component={HomeScreen}
-          options={{
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="home" size={size} color={color} />
-            ),
-          }}
-        />
+      <Tab.Navigator>
+        <Tab.Screen name="Home">
+          {() => (
+            <Home
+              onLogout={() => {
+                setLoggedIn(false);
+                setShowRegister(false);
+              }}
+            />
+          )}
+        </Tab.Screen>
 
         <Tab.Screen
           name="Add Recipe"
-          component={AddRecipeScreen}
-          options={{
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="add-circle" size={size} color={color} />
-            ),
-          }}
+          component={AddRecipe}
         />
       </Tab.Navigator>
     </NavigationContainer>
   );
 }
-
