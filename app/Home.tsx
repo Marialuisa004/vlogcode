@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { supabase } from "../lib/supabase";
 import { useFocusEffect } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type Recipe = {
   id: string;
@@ -115,6 +116,18 @@ export default function Home({ navigation }: any) {
     );
   };
 
+  const logout = async () => {
+  await AsyncStorage.removeItem("user");
+
+  navigation.replace("Login");
+};
+
+<TouchableOpacity
+  style={styles.logoutBtn}
+  onPress={logout}
+>
+  <Text style={styles.logoutText}>Logout</Text>
+</TouchableOpacity>
   if (loading) {
     return (
       <View style={styles.loader}>
@@ -195,8 +208,15 @@ export default function Home({ navigation }: any) {
                       : "See More"}
                   </Text>
                 </TouchableOpacity>
+
               )}
 
+                <TouchableOpacity
+                  style={styles.logoutBtn}
+                  onPress={logout}
+                >
+                  <Text style={styles.logoutText}>Logout</Text>
+                </TouchableOpacity>
               <View style={styles.actions}>
 
                 <TouchableOpacity
@@ -354,4 +374,18 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
+  
+  logoutBtn: {
+  backgroundColor: "#e74c3c",
+  padding: 10,
+  borderRadius: 10,
+  alignSelf: "flex-end",
+  marginBottom: 10,
+},
+
+logoutText: {
+  color: "#fff",
+  fontWeight: "bold",
+},
+  
 });

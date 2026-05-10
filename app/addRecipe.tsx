@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  SafeAreaView,
   View,
   Text,
   TextInput,
@@ -18,9 +19,6 @@ export default function AddRecipe({ navigation }: any) {
   const [category, setCategory] = useState("Breakfast");
   const [image, setImage] = useState<string | null>(null);
 
-  // =========================
-  // PICK IMAGE
-  // =========================
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -33,9 +31,6 @@ export default function AddRecipe({ navigation }: any) {
     }
   };
 
-  // =========================
-  // SAVE RECIPE
-  // =========================
   const saveRecipe = async () => {
     if (!title || !ingredients || !image) {
       Alert.alert("Error", "Please fill all fields");
@@ -46,7 +41,7 @@ export default function AddRecipe({ navigation }: any) {
       {
         title,
         ingredients,
-        category, // ✅ CATEGORY SAVED HERE
+        category,
         image,
       },
     ]);
@@ -61,107 +56,125 @@ export default function AddRecipe({ navigation }: any) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
 
-      <Text style={styles.label}>Recipe Title</Text>
-      <TextInput
-        value={title}
-        onChangeText={setTitle}
-        style={styles.input}
-        placeholder="Title:"
-      />
+        <Text style={styles.label}>Recipe Title</Text>
 
-      <Text style={styles.label}>Ingredients</Text>
-      <TextInput
-        value={ingredients}
-        onChangeText={setIngredients}
-        style={[styles.input, { height: 100 }]}
-        placeholder="Ingredients:"
-        multiline
-      />
+        <TextInput
+          value={title}
+          onChangeText={setTitle}
+          style={styles.input}
+          placeholder="Enter recipe title"
+        />
 
-      {/* =========================
-          CATEGORY SELECTOR
-      ========================= */}
-      <Text style={styles.label}>Select Category</Text>
+        <Text style={styles.label}>Ingredients</Text>
 
-      <View style={styles.categoryContainer}>
-        {["Breakfast", "Lunch", "Dessert"].map((item) => (
-          <TouchableOpacity
-            key={item}
-            onPress={() => setCategory(item)}
-            style={[
-              styles.categoryButton,
-              category === item && styles.categoryButtonActive,
-            ]}
-          >
-            <Text
-              style={{
-                color: category === item ? "#fff" : "#333",
-                fontWeight: "bold",
-              }}
+        <TextInput
+          value={ingredients}
+          onChangeText={setIngredients}
+          style={[styles.input, styles.ingredientsInput]}
+          placeholder="Enter ingredients"
+          multiline
+        />
+
+        <Text style={styles.label}>Select Category</Text>
+
+        <View style={styles.categoryContainer}>
+          {["Breakfast", "Lunch", "Dessert"].map((item) => (
+            <TouchableOpacity
+              key={item}
+              onPress={() => setCategory(item)}
+              style={[
+                styles.categoryButton,
+                category === item && styles.categoryButtonActive,
+              ]}
             >
-              {item}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+              <Text
+                style={{
+                  color: category === item ? "#fff" : "#333",
+                  fontWeight: "bold",
+                }}
+              >
+                {item}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      {/* =========================
-          IMAGE PICKER
-      ========================= */}
-      <TouchableOpacity onPress={pickImage} style={styles.imageBtn}>
-        <Text style={{ color: "#fff" }}>Pick Image</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.imageButton}
+          onPress={pickImage}
+        >
+          <Text style={styles.imageButtonText}>
+            Pick Image
+          </Text>
+        </TouchableOpacity>
 
-      {image && <Image source={{ uri: image }} style={styles.image} />}
+        {image && (
+          <Image source={{ uri: image }} style={styles.image} />
+        )}
 
-      {/* =========================
-          SAVE BUTTON
-      ========================= */}
-      <TouchableOpacity onPress={saveRecipe} style={styles.saveBtn}>
-        <Text style={{ color: "#fff", fontWeight: "bold" }}>Save Recipe</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.saveButton}
+          onPress={saveRecipe}
+        >
+          <Text style={styles.saveButtonText}>
+            Save Recipe
+          </Text>
+        </TouchableOpacity>
 
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-// =========================
-// STYLES
-// =========================
 const styles = StyleSheet.create({
-  container: {
-    padding: 15,
+  safeArea: {
+    flex: 1,
     backgroundColor: "#f6f6f6",
-    flexGrow: 1,
+  },
+
+  container: {
+    paddingHorizontal: 15,
+    paddingTop: 50,
+    paddingBottom: 220,
+    bottom: 90,
   },
 
   label: {
     fontSize: 16,
     fontWeight: "bold",
-    marginTop: 10,
-    marginBottom: 5,
+    marginBottom: 6,
+    marginTop: 12,
   },
 
   input: {
     backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 10,
+    padding: 14,
+    borderRadius: 12,
     marginBottom: 10,
+  },
+
+  ingredientsInput: {
+    height: 120,
+    textAlignVertical: "top",
   },
 
   categoryContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 15,
+    marginBottom: 20,
   },
 
   categoryButton: {
     flex: 1,
-    padding: 10,
-    marginHorizontal: 5,
-    backgroundColor: "#e0e0e0",
+    backgroundColor: "#e5e5e5",
+    paddingVertical: 12,
+    marginHorizontal: 4,
     borderRadius: 10,
     alignItems: "center",
   },
@@ -170,25 +183,38 @@ const styles = StyleSheet.create({
     backgroundColor: "#ff6347",
   },
 
-  imageBtn: {
+  imageButton: {
     backgroundColor: "#4a90e2",
-    padding: 12,
-    borderRadius: 10,
+    padding: 14,
+    borderRadius: 12,
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 15,
+  },
+
+  imageButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 
   image: {
     width: "100%",
-    height: 200,
-    borderRadius: 10,
-    marginBottom: 10,
+    height: 220,
+    borderRadius: 15,
+    marginBottom: 20,
   },
 
-  saveBtn: {
-    backgroundColor: "#ff6347",
-    padding: 15,
-    borderRadius: 10,
-    alignItems: "center",
+ saveButton: {
+  backgroundColor: "#ff6347",
+  padding: 18,
+  borderRadius: 14,
+  alignItems: "center",
+  marginTop: 20,
+  marginBottom: 80,
+},
+
+  saveButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });
