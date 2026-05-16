@@ -30,7 +30,7 @@ function Tabs() {
 
           if (route.name === "Home") {
             iconName = "home"; // 🏠
-          } else if (route.name === "AddRecipe") {
+          } else if (route.name === "➕AddRecipe") {
             iconName = "add-circle"; // ➕
           }
 

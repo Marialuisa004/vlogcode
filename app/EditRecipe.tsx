@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ScrollView,
 } from "react-native";
 import { supabase } from "../lib/supabase";
 
@@ -14,14 +15,26 @@ export default function EditRecipe({ route, navigation }: any) {
 
   const [title, setTitle] = useState(recipe.title);
   const [ingredients, setIngredients] = useState(recipe.ingredients);
+  const [steps, setSteps] = useState(recipe.steps || "");
   const [category, setCategory] = useState(recipe.category);
 
+  const categories = ["Breakfast", "Lunch", "Dinner", "Dessert"];
+
+  // =========================
+  // UPDATE RECIPE
+  // =========================
   const updateRecipe = async () => {
+    if (!title || !ingredients || !steps || !category) {
+      Alert.alert("Missing Fields", "Please fill all fields");
+      return;
+    }
+
     const { error } = await supabase
       .from("recipes")
       .update({
         title,
         ingredients,
+        steps,
         category,
       })
       .eq("id", recipe.id);
@@ -32,74 +45,128 @@ export default function EditRecipe({ route, navigation }: any) {
     }
 
     Alert.alert("Success", "Recipe updated!");
+
+    // go back (real-time will update Home automatically)
     navigation.goBack();
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
 
-      <Text style={styles.header}>Edit Recipe ✏️</Text>
+      <Text style={styles.header}>Edit Recipe</Text>
 
+      {/* TITLE */}
       <TextInput
-        placeholder="Title"
         value={title}
         onChangeText={setTitle}
+        placeholder="Title"
         style={styles.input}
       />
 
+      {/* INGREDIENTS */}
       <TextInput
-        placeholder="Ingredients"
         value={ingredients}
         onChangeText={setIngredients}
-        style={styles.input}
+        placeholder="Ingredients"
         multiline
+        style={[styles.input, { height: 100 }]}
       />
 
+      {/* COOKING STEPS */}
       <TextInput
-        placeholder="Category"
-        value={category}
-        onChangeText={setCategory}
-        style={styles.input}
+        value={steps}
+        onChangeText={setSteps}
+        placeholder="Cooking Steps"
+        multiline
+        style={[styles.input, { height: 120 }]}
       />
 
-      <TouchableOpacity onPress={updateRecipe} style={styles.button}>
-        <Text style={styles.buttonText}>Update Recipe</Text>
+      {/* CATEGORY BUTTONS */}
+      <Text style={styles.label}>Category</Text>
+
+      <View style={styles.categoryRow}>
+        {categories.map((item) => (
+          <TouchableOpacity
+            key={item}
+            onPress={() => setCategory(item)}
+            style={[
+              styles.catBtn,
+              category === item && styles.catActive,
+            ]}
+          >
+            <Text style={{ color: category === item ? "#fff" : "#333" }}>
+              {item}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* SAVE BUTTON */}
+      <TouchableOpacity style={styles.saveBtn} onPress={updateRecipe}>
+        <Text style={styles.saveText}>Update Recipe</Text>
       </TouchableOpacity>
 
-    </View>
+    </ScrollView>
   );
 }
 
+// =========================
+// STYLES
+// =========================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f6f6f6",
-    padding: 20,
+    padding: 15,
   },
 
   header: {
     fontSize: 22,
     fontWeight: "bold",
-    marginBottom: 20,
+    marginBottom: 15,
+  },
+
+  label: {
+    fontWeight: "bold",
+    marginTop: 10,
+    marginBottom: 5,
   },
 
   input: {
     backgroundColor: "#fff",
     padding: 12,
     borderRadius: 10,
-    marginBottom: 10,
-    elevation: 2,
+    marginBottom: 12,
   },
 
-  button: {
+  categoryRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 15,
+  },
+
+  catBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: "#ddd",
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+
+  catActive: {
     backgroundColor: "#ff6347",
+  },
+
+  saveBtn: {
+    backgroundColor: "#4a90e2",
     padding: 15,
     borderRadius: 10,
-    marginTop: 10,
     alignItems: "center",
+    marginTop: 10,
   },
 
-  buttonText: {
+  saveText: {
     color: "#fff",
     fontWeight: "bold",
   },

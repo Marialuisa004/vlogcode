@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../lib/supabase";
 
@@ -15,10 +16,18 @@ export default function Login({ navigation }: any) {
   const [password, setPassword] = useState("");
 
   const login = async () => {
+
+    console.log("Login button clicked");
+
     if (!username || !password) {
+      console.log("Missing username or password");
+
       Alert.alert("Error", "Fill all fields");
       return;
     }
+
+    console.log("Username:", username);
+    console.log("Password:", password);
 
     const { data, error } = await supabase
       .from("users")
@@ -27,12 +36,24 @@ export default function Login({ navigation }: any) {
       .eq("password", password)
       .single();
 
+    console.log("Supabase response data:", data);
+    console.log("Supabase response error:", error);
+
     if (error || !data) {
+      console.log("Invalid credentials");
+
       Alert.alert("Error", "Invalid credentials");
       return;
     }
 
-    await AsyncStorage.setItem("user", JSON.stringify(data));
+    console.log("Login success");
+
+    await AsyncStorage.setItem(
+      "user",
+      JSON.stringify(data)
+    );
+
+    console.log("User saved to AsyncStorage");
 
     navigation.replace("Main");
   };
@@ -61,7 +82,9 @@ export default function Login({ navigation }: any) {
         style={styles.button}
         onPress={login}
       >
-        <Text style={styles.buttonText}>Login</Text>
+        <Text style={styles.buttonText}>
+          Login
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity

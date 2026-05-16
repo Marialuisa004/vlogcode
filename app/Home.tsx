@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+}import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,10 +8,8 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { supabase } from "../lib/supabase";
-import { useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type Recipe = {
@@ -20,114 +18,102 @@ type Recipe = {
   image: string;
   ingredients: string;
   category: string;
+  steps?: string;
 };
 
-export default function Home({ navigation }: any) {
+type Props = { navigation: any };
+
+export default function Home({ navigation }: Props) {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [filtered, setFiltered] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
 
-  const [expanded, setExpanded] = useState(false);
-  const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const categories = ["All", "Breakfast", "Lunch", "Dinner", "Dessert"];
 
-  const categories = ["All", "Dessert", "Lunch", "Breakfast", "Dinner"];
-
+  // =========================
+  // FETCH RECIPES
+  // =========================
   const fetchRecipes = async () => {
     setLoading(true);
-
     const { data, error } = await supabase.from("recipes").select("*");
 
     if (error) {
-      console.log("Fetch error:", error.message);
+      console.log("FETCH ERROR:", error.message);
       setLoading(false);
       return;
     }
 
-    setRecipes(data || []);
+    setRecipes((data || []) as Recipe[]);
     setLoading(false);
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchRecipes();
-    }, [])
-  );
+  // =========================
+  // REALTIME (FIXED + NO DUPLICATES)
+  // =========================
+  useEffect(() => {
+    fetchRecipes();
 
+    const channel = supabase
+      .channel("recipes-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "recipes" },
+        (payload) => {
+          console.log("REALTIME:", payload);
+
+          if (payload.eventType === "INSERT") {
+            setRecipes((prev) => {
+              const exists = prev.some((r) => r.id === payload.new.id);
+              if (exists) return prev;
+              return [payload.new as Recipe, ...prev];
+            });
+          }
+
+          if (payload.eventType === "DELETE") {
+            setRecipes((prev) => prev.filter((item) => item.id !== payload.old.id));
+          }
+
+          if (payload.eventType === "UPDATE") {
+            setRecipes((prev) =>
+              prev.map((item) => (item.id === payload.new.id ? (payload.new as Recipe) : item))
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // =========================
+  // FILTER + SEARCH
+  // =========================
   useEffect(() => {
     const base =
       selectedCategory === "All"
         ? recipes
-        : recipes.filter((r) => r.category === selectedCategory);
+        : recipes.filter((r) => (r.category || "") === selectedCategory);
 
-    const searched = base.filter((item) =>
-      item.title.toLowerCase().includes(search.toLowerCase())
-    );
+    const q = search.trim().toLowerCase();
+    const searched = q.length
+      ? base.filter((item) => (item.title || "").toLowerCase().includes(q))
+      : base;
 
     setFiltered(searched);
+  }, [recipes, search, selectedCategory]);
 
-    setExpanded(false);
-    setExpandedItems([]);
-  }, [recipes, selectedCategory, search]);
-
-  // ✅ FIXED DELETE WITH GUARANTEED POPUP
-  const deleteRecipe = (id: string) => {
-    console.log("Delete clicked:", id);
-
-    Alert.alert(
-      "Delete Recipe",
-      "Are you sure you want to delete this recipe? This cannot be undone.",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-          onPress: () => console.log("Delete cancelled"),
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            console.log("Confirm delete:", id);
-
-            const { error } = await supabase
-              .from("recipes")
-              .delete()
-              .eq("id", id);
-
-            if (error) {
-              console.log("Delete error:", error.message);
-              Alert.alert("Error", error.message);
-              return;
-            }
-
-            fetchRecipes();
-          },
-        },
-      ]
-    );
-  };
-
-  const toggleIngredient = (id: string) => {
-    setExpandedItems((prev: string[]) =>
-      prev.includes(id)
-        ? prev.filter((x) => x !== id)
-        : [...prev, id]
-    );
-  };
-
+  // =========================
+  // LOGOUT
+  // =========================
   const logout = async () => {
-  await AsyncStorage.removeItem("user");
+    await AsyncStorage.removeItem("user");
+    navigation.replace("Login");
+  };
 
-  navigation.replace("Login");
-};
-
-<TouchableOpacity
-  style={styles.logoutBtn}
-  onPress={logout}
->
-  <Text style={styles.logoutText}>Logout</Text>
-</TouchableOpacity>
   if (loading) {
     return (
       <View style={styles.loader}>
@@ -136,125 +122,68 @@ export default function Home({ navigation }: any) {
     );
   }
 
-  const visibleRecipes = expanded ? filtered : filtered.slice(0, 3);
-
   return (
     <View style={styles.container}>
+      {/* TOP BAR */}
+      <View style={styles.topBar}>
+        <TextInput
+          placeholder="Search recipes..."
+          value={search}
+          onChangeText={setSearch}
+          style={styles.search}
+        />
 
-      {/* 🔍 SEARCH */}
-      <TextInput
-        placeholder="Search recipes..."
-        placeholderTextColor="#999"
-        value={search}
-        onChangeText={setSearch}
-        style={styles.search}
-      />
+        <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
 
-      {/* 🧠 CATEGORY */}
+      {/* CATEGORY */}
       <FlatList
         horizontal
         showsHorizontalScrollIndicator={false}
         data={categories}
         keyExtractor={(i) => i}
-        style={{ marginBottom: 10 }}
+        style={styles.categoriesList}
         renderItem={({ item }) => (
           <TouchableOpacity
             onPress={() => setSelectedCategory(item)}
-            style={[
-              styles.categoryBtn,
-              selectedCategory === item && styles.categoryActive,
-            ]}
+            style={[styles.categoryBtn, selectedCategory === item && styles.categoryActive]}
           >
-            <Text
-              style={{
-                color: selectedCategory === item ? "#fff" : "#333",
-                fontWeight: "bold",
-              }}
-            >
+            <Text style={selectedCategory === item ? styles.categoryActive : styles.category}>
               {item}
             </Text>
           </TouchableOpacity>
         )}
       />
 
-      {/* 🍽️ RECIPES */}
+      {/* RECIPES */}
       <FlatList
-        data={visibleRecipes}
+        data={filtered}
         keyExtractor={(i) => i.id}
         renderItem={({ item }) => (
           <View style={styles.card}>
-
             <Image source={{ uri: item.image }} style={styles.image} />
 
             <View style={styles.cardContent}>
-
               <Text style={styles.title}>{item.title}</Text>
               <Text style={styles.category}>{item.category}</Text>
-
-              <Text
-                numberOfLines={
-                  expandedItems.includes(item.id) ? undefined : 2
-                }
-                style={styles.ingredients}
-              >
+              <Text numberOfLines={2} style={styles.ingredients}>
                 {item.ingredients}
               </Text>
 
-              {item.ingredients.length > 80 && (
-                <TouchableOpacity onPress={() => toggleIngredient(item.id)}>
-                  <Text style={styles.seeMoreIngredient}>
-                    {expandedItems.includes(item.id)
-                      ? "Show Less"
-                      : "See More"}
-                  </Text>
-                </TouchableOpacity>
-
-              )}
-
-                <TouchableOpacity
-                  style={styles.logoutBtn}
-                  onPress={logout}
-                >
-                  <Text style={styles.logoutText}>Logout</Text>
-                </TouchableOpacity>
               <View style={styles.actions}>
-
                 <TouchableOpacity
-                  onPress={() =>
-                    navigation.navigate("EditRecipe", { recipe: item })
-                  }
+                  onPress={() => navigation.navigate("EditRecipe", { recipe: item })}
                   style={styles.editBtn}
                 >
                   <Text style={styles.btnText}>Edit</Text>
                 </TouchableOpacity>
-
-                {/* ✅ DELETE BUTTON */}
-                <TouchableOpacity
-                  onPress={() => deleteRecipe(item.id)}
-                  style={styles.deleteBtn}
-                >
-                  <Text style={styles.btnText}>Delete</Text>
-                </TouchableOpacity>
-
               </View>
-
             </View>
           </View>
         )}
       />
-
-      {/* 🔽 SEE MORE */}
-      {filtered.length > 3 && (
-        <TouchableOpacity
-          onPress={() => setExpanded(!expanded)}
-          style={styles.seeMoreBtn}
-        >
-          <Text style={styles.seeMoreText}>
-            {expanded ? "Show Less" : "See More"}
-          </Text>
-        </TouchableOpacity>
-      )}
-
     </View>
   );
 }
@@ -284,7 +213,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f2f2f2",
     paddingVertical: 6,
     paddingHorizontal: 14,
-    borderRadius: 20,
+    borderRadius: 15,
     marginRight: 8,
     height: 34,
     justifyContent: "center",

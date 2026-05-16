@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  SafeAreaView,
   View,
   Text,
   TextInput,
@@ -16,13 +15,24 @@ import { supabase } from "../lib/supabase";
 export default function AddRecipe({ navigation }: any) {
   const [title, setTitle] = useState("");
   const [ingredients, setIngredients] = useState("");
-  const [category, setCategory] = useState("Breakfast");
+  const [steps, setSteps] = useState("");
+  const [category, setCategory] = useState("");
   const [image, setImage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
+  const categories = ["Breakfast", "Lunch", "Dinner", "Dessert"];
+
+  // 📸 PICK IMAGE
   const pickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert("Permission required", "Allow access to photos");
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
       quality: 1,
     });
 
@@ -31,9 +41,45 @@ export default function AddRecipe({ navigation }: any) {
     }
   };
 
-  const saveRecipe = async () => {
-    if (!title || !ingredients || !image) {
-      Alert.alert("Error", "Please fill all fields");
+  // ☁️ UPLOAD IMAGE TO SUPABASE STORAGE
+  const uploadImage = async (uri: string) => {
+    const fileName = `${Date.now()}.jpg`;
+
+    const response = await fetch(uri);
+    const blob = await response.blob();
+
+    const { error } = await supabase.storage
+      .from("recipe-images")
+      .upload(fileName, blob, {
+        contentType: "image/jpeg",
+      });
+
+    if (error) {
+      console.log("UPLOAD ERROR:", error.message);
+      return null;
+    }
+
+    const { data } = supabase.storage
+      .from("recipe-images")
+      .getPublicUrl(fileName);
+
+    return data.publicUrl;
+  };
+
+  // 💾 SAVE RECIPE
+  const addRecipe = async () => {
+    if (!title || !ingredients || !steps || !category || !image) {
+      Alert.alert("Missing Fields", "Please complete all fields");
+      return;
+    }
+
+    setLoading(true);
+
+    const imageUrl = await uploadImage(image);
+
+    if (!imageUrl) {
+      setLoading(false);
+      Alert.alert("Error", "Image upload failed");
       return;
     }
 
@@ -41,180 +87,143 @@ export default function AddRecipe({ navigation }: any) {
       {
         title,
         ingredients,
+        steps,
         category,
-        image,
+        image: imageUrl,
       },
     ]);
 
+    setLoading(false);
+
     if (error) {
+      console.log(error);
       Alert.alert("Error", error.message);
       return;
     }
 
     Alert.alert("Success", "Recipe added!");
-    navigation.goBack();
+
+    navigation.goBack(); // IMPORTANT FIX (no reset)
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
+    <ScrollView style={styles.container}>
+
+      <Text style={styles.header}>Add Recipe</Text>
+
+      <TextInput
+        placeholder="Title"
+        value={title}
+        onChangeText={setTitle}
+        style={styles.input}
+      />
+
+      <TextInput
+        placeholder="Ingredients"
+        value={ingredients}
+        onChangeText={setIngredients}
+        style={[styles.input, { height: 100 }]}
+        multiline
+      />
+
+      <TextInput
+        placeholder="Cooking Steps"
+        value={steps}
+        onChangeText={setSteps}
+        style={[styles.input, { height: 120 }]}
+        multiline
+      />
+
+      {/* CATEGORY */}
+      <View style={styles.categoryRow}>
+        {categories.map((item) => (
+          <TouchableOpacity
+            key={item}
+            onPress={() => setCategory(item)}
+            style={[
+              styles.catBtn,
+              category === item && styles.catActive,
+            ]}
+          >
+            <Text style={{ color: category === item ? "#fff" : "#333" }}>
+              {item}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* IMAGE */}
+      <TouchableOpacity style={styles.imageBtn} onPress={pickImage}>
+        <Text style={{ color: "#fff" }}>Pick Image</Text>
+      </TouchableOpacity>
+
+      {image && <Image source={{ uri: image }} style={styles.preview} />}
+
+      {/* SAVE */}
+      <TouchableOpacity
+        style={styles.saveBtn}
+        onPress={addRecipe}
+        disabled={loading}
       >
+        <Text style={{ color: "#fff", fontWeight: "bold" }}>
+          {loading ? "Saving..." : "Save Recipe"}
+        </Text>
+      </TouchableOpacity>
 
-        <Text style={styles.label}>Recipe Title</Text>
-
-        <TextInput
-          value={title}
-          onChangeText={setTitle}
-          style={styles.input}
-          placeholder="Enter recipe title"
-        />
-
-        <Text style={styles.label}>Ingredients</Text>
-
-        <TextInput
-          value={ingredients}
-          onChangeText={setIngredients}
-          style={[styles.input, styles.ingredientsInput]}
-          placeholder="Enter ingredients"
-          multiline
-        />
-
-        <Text style={styles.label}>Select Category</Text>
-
-        <View style={styles.categoryContainer}>
-          {["Breakfast", "Lunch", "Dessert"].map((item) => (
-            <TouchableOpacity
-              key={item}
-              onPress={() => setCategory(item)}
-              style={[
-                styles.categoryButton,
-                category === item && styles.categoryButtonActive,
-              ]}
-            >
-              <Text
-                style={{
-                  color: category === item ? "#fff" : "#333",
-                  fontWeight: "bold",
-                }}
-              >
-                {item}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <TouchableOpacity
-          style={styles.imageButton}
-          onPress={pickImage}
-        >
-          <Text style={styles.imageButtonText}>
-            Pick Image
-          </Text>
-        </TouchableOpacity>
-
-        {image && (
-          <Image source={{ uri: image }} style={styles.image} />
-        )}
-
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={saveRecipe}
-        >
-          <Text style={styles.saveButtonText}>
-            Save Recipe
-          </Text>
-        </TouchableOpacity>
-
-      </ScrollView>
-    </SafeAreaView>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#f6f6f6",
-  },
+  container: { flex: 1, padding: 20, backgroundColor: "#f6f6f6" },
 
-  container: {
-    paddingHorizontal: 15,
-    paddingTop: 50,
-    paddingBottom: 220,
-    bottom: 90,
-  },
-
-  label: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 6,
-    marginTop: 12,
-  },
+  header: { fontSize: 22, fontWeight: "bold", marginBottom: 15 },
 
   input: {
     backgroundColor: "#fff",
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 10,
-  },
-
-  ingredientsInput: {
-    height: 120,
-    textAlignVertical: "top",
-  },
-
-  categoryContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-
-  categoryButton: {
-    flex: 1,
-    backgroundColor: "#e5e5e5",
-    paddingVertical: 12,
-    marginHorizontal: 4,
+    padding: 12,
     borderRadius: 10,
-    alignItems: "center",
+    marginBottom: 12,
   },
 
-  categoryButtonActive: {
-    backgroundColor: "#ff6347",
-  },
-
-  imageButton: {
-    backgroundColor: "#4a90e2",
-    padding: 14,
-    borderRadius: 12,
-    alignItems: "center",
+  categoryRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     marginBottom: 15,
   },
 
-  imageButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
+  catBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: "#ddd",
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 8,
   },
 
-  image: {
+  catActive: {
+    backgroundColor: "#ff6347",
+  },
+
+  imageBtn: {
+    backgroundColor: "#4a90e2",
+    padding: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+
+  preview: {
     width: "100%",
-    height: 220,
-    borderRadius: 15,
-    marginBottom: 20,
+    height: 200,
+    borderRadius: 10,
+    marginBottom: 10,
   },
 
- saveButton: {
-  backgroundColor: "#ff6347",
-  padding: 18,
-  borderRadius: 14,
-  alignItems: "center",
-  marginTop: 20,
-  marginBottom: 80,
-},
-
-  saveButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
+  saveBtn: {
+    backgroundColor: "#ff6347",
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
   },
 });
