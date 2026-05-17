@@ -43,67 +43,95 @@ export default function AddRecipe({ navigation }: any) {
 
   // ☁️ UPLOAD IMAGE TO SUPABASE STORAGE
   const uploadImage = async (uri: string) => {
-    const fileName = `${Date.now()}.jpg`;
+    try {
+      const fileName = `${Date.now()}.jpg`;
 
-    const response = await fetch(uri);
-    const blob = await response.blob();
+      const response = await fetch(uri);
+      if (!response.ok) {
+        console.log("[AddRecipe] fetch image failed:", response.status, response.statusText);
+        return null;
+      }
 
-    const { error } = await supabase.storage
-      .from("recipe-images")
-      .upload(fileName, blob, {
-        contentType: "image/jpeg",
-      });
+      const blob = await response.blob();
 
-    if (error) {
-      console.log("UPLOAD ERROR:", error.message);
+      const { error } = await supabase.storage
+        .from("recipe-images")
+        .upload(fileName, blob, {
+          contentType: "image/jpeg",
+          upsert: true,
+        });
+
+      if (error) {
+        console.log("[AddRecipe] UPLOAD ERROR:", error.message);
+        return null;
+      }
+
+      const { data } = supabase.storage
+        .from("recipe-images")
+        .getPublicUrl(fileName);
+
+      return data.publicUrl;
+    } catch (e: any) {
+      console.log("[AddRecipe] uploadImage exception:", e);
       return null;
     }
-
-    const { data } = supabase.storage
-      .from("recipe-images")
-      .getPublicUrl(fileName);
-
-    return data.publicUrl;
   };
 
   // 💾 SAVE RECIPE
   const addRecipe = async () => {
+    console.log("[AddRecipe] Save pressed", {
+      titlePresent: !!title,
+      ingredientsPresent: !!ingredients,
+      stepsPresent: !!steps,
+      categoryPresent: !!category,
+      imagePresent: !!image,
+      loading,
+    });
+
     if (!title || !ingredients || !steps || !category || !image) {
       Alert.alert("Missing Fields", "Please complete all fields");
       return;
     }
 
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const imageUrl = await uploadImage(image);
+      const imageUrl = await uploadImage(image);
 
-    if (!imageUrl) {
+      if (!imageUrl) {
+        Alert.alert("Error", "Image upload failed");
+        return;
+      }
+
+      console.log("[AddRecipe] Inserting recipe with image url:", imageUrl);
+
+      const { data, error } = await supabase
+        .from("recipes")
+        .insert([
+          {
+            title,
+            ingredients,
+            steps,
+            category,
+            image: imageUrl,
+          },
+        ]);
+
+      if (error) {
+        console.log("[AddRecipe] Insert error:", error);
+        Alert.alert("Error", error.message);
+        return;
+      }
+
+      console.log("[AddRecipe] Insert success:", data);
+      Alert.alert("Success", "Recipe added!");
+      navigation.goBack();
+    } catch (e: any) {
+      console.log("[AddRecipe] Unexpected error:", e);
+      Alert.alert("Error", e?.message ?? "Something went wrong");
+    } finally {
       setLoading(false);
-      Alert.alert("Error", "Image upload failed");
-      return;
     }
-
-    const { error } = await supabase.from("recipes").insert([
-      {
-        title,
-        ingredients,
-        steps,
-        category,
-        image: imageUrl,
-      },
-    ]);
-
-    setLoading(false);
-
-    if (error) {
-      console.log(error);
-      Alert.alert("Error", error.message);
-      return;
-    }
-
-    Alert.alert("Success", "Recipe added!");
-
-    navigation.goBack(); // IMPORTANT FIX (no reset)
   };
 
   return (
