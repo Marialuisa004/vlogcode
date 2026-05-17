@@ -68,6 +68,9 @@ export default function App() {
         {/* MAIN APP (TABS) */}
         <Stack.Screen name="Main" component={Tabs} />
 
+        {/* PROFILE (NO TAB) */}
+        <Stack.Screen name="Profile" component={require("./app/Profile").default} />
+
         {/* EDIT SCREEN (NO TAB) */}
         <Stack.Screen name="EditRecipe" component={EditRecipe} />
 

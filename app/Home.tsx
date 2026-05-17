@@ -32,6 +32,7 @@ export default function Home({ navigation }: Props) {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
 
+
   const categories = ["All", "Breakfast", "Lunch", "Dinner", "Dessert"];
 
   const fetchRecipes = async (showLoader = false) => {
@@ -46,8 +47,10 @@ export default function Home({ navigation }: Props) {
       setLoading(false);
       return;
     }
-
-    setRecipes((data || []) as Recipe[]);
+    // Normalize IDs to strings (DB may return numbers) and update filtered list
+    const normalized = (data || []).map((d: any) => ({ ...d, id: String(d.id) })) as Recipe[];
+    setRecipes(normalized);
+    setFiltered(normalized);
     setLoading(false);
   };
 
@@ -101,6 +104,8 @@ export default function Home({ navigation }: Props) {
         : recipes.filter((r) => (r.category || "") === selectedCategory);
 
     const q = search.trim().toLowerCase();
+
+    // Always compute filtered; if search is empty show full list.
     const searched = q.length
       ? base.filter((item) => {
           const title = (item.title || "").toLowerCase();
@@ -143,7 +148,20 @@ export default function Home({ navigation }: Props) {
                 value={search}
                 onChangeText={setSearch}
                 style={styles.search}
+                keyboardType="default"
+                autoCorrect={false}
+                autoCapitalize="none"
+                autoFocus
+                selectTextOnFocus
+                returnKeyType="search"
               />
+
+              <TouchableOpacity
+                onPress={() => navigation.navigate("Profile")}
+                style={styles.logoutBtn}
+              >
+                <Text style={styles.logoutText}>Profile</Text>
+              </TouchableOpacity>
 
               <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
                 <Text style={styles.logoutText}>Logout</Text>
