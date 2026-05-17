@@ -175,55 +175,83 @@ export default function AddRecipe({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#f6f6f6" },
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: "#f3fcf6",
+  },
 
-  header: { fontSize: 22, fontWeight: "bold", marginBottom: 15 },
+  header: {
+    fontSize: 26,
+    fontWeight: "800",
+    marginBottom: 20,
+    color: "#3c7d68",
+  },
 
   input: {
     backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 12,
+    padding: 14,
+    borderRadius: 18,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "#b8e6d5",
+    shadowColor: "#9cd3c1",
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 2,
   },
 
   categoryRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginBottom: 15,
+    marginBottom: 18,
   },
 
   catBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: "#ddd",
-    borderRadius: 20,
-    marginRight: 8,
-    marginBottom: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: "#cde9d8",
+    borderRadius: 24,
+    marginRight: 10,
+    marginBottom: 10,
   },
 
   catActive: {
-    backgroundColor: "#ff6347",
+    backgroundColor: "#72b99e",
   },
 
   imageBtn: {
-    backgroundColor: "#4a90e2",
-    padding: 12,
-    borderRadius: 10,
+    backgroundColor: "#4d9c7a",
+    padding: 14,
+    borderRadius: 20,
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 14,
+    shadowColor: "#7fc6a7",
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 4,
   },
 
   preview: {
     width: "100%",
-    height: 200,
-    borderRadius: 10,
-    marginBottom: 10,
+    height: 210,
+    borderRadius: 20,
+    marginBottom: 14,
   },
 
   saveBtn: {
-    backgroundColor: "#ff6347",
-    padding: 15,
-    borderRadius: 10,
+    backgroundColor: "#459c80",
+    padding: 16,
+    borderRadius: 24,
     alignItems: "center",
+    shadowColor: "#7fc6a7",
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+
+  saveText: {
+    color: "#fff",
+    fontWeight: "800",
   },
 });

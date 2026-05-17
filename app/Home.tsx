@@ -1,4 +1,4 @@
-}import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,9 +8,11 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import { supabase } from "../lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
 
 type Recipe = {
   id: string;
@@ -32,11 +34,11 @@ export default function Home({ navigation }: Props) {
 
   const categories = ["All", "Breakfast", "Lunch", "Dinner", "Dessert"];
 
-  // =========================
-  // FETCH RECIPES
-  // =========================
-  const fetchRecipes = async () => {
-    setLoading(true);
+  const fetchRecipes = async (showLoader = false) => {
+    if (showLoader) {
+      setLoading(true);
+    }
+
     const { data, error } = await supabase.from("recipes").select("*");
 
     if (error) {
@@ -49,12 +51,13 @@ export default function Home({ navigation }: Props) {
     setLoading(false);
   };
 
-  // =========================
-  // REALTIME (FIXED + NO DUPLICATES)
-  // =========================
-  useEffect(() => {
-    fetchRecipes();
+  useFocusEffect(
+    useCallback(() => {
+      fetchRecipes(true);
+    }, [])
+  );
 
+  useEffect(() => {
     const channel = supabase
       .channel("recipes-realtime")
       .on(
@@ -65,19 +68,21 @@ export default function Home({ navigation }: Props) {
 
           if (payload.eventType === "INSERT") {
             setRecipes((prev) => {
-              const exists = prev.some((r) => r.id === payload.new.id);
+              const exists = prev.some((r) => r.id === (payload as any).new.id);
               if (exists) return prev;
-              return [payload.new as Recipe, ...prev];
+              return [(payload as any).new as Recipe, ...prev];
             });
           }
 
           if (payload.eventType === "DELETE") {
-            setRecipes((prev) => prev.filter((item) => item.id !== payload.old.id));
+            setRecipes((prev) => prev.filter((item) => item.id !== (payload as any).old.id));
           }
 
           if (payload.eventType === "UPDATE") {
             setRecipes((prev) =>
-              prev.map((item) => (item.id === payload.new.id ? (payload.new as Recipe) : item))
+              prev.map((item) =>
+                item.id === (payload as any).new.id ? ((payload as any).new as Recipe) : item
+              )
             );
           }
         }
@@ -89,9 +94,6 @@ export default function Home({ navigation }: Props) {
     };
   }, []);
 
-  // =========================
-  // FILTER + SEARCH
-  // =========================
   useEffect(() => {
     const base =
       selectedCategory === "All"
@@ -100,15 +102,21 @@ export default function Home({ navigation }: Props) {
 
     const q = search.trim().toLowerCase();
     const searched = q.length
-      ? base.filter((item) => (item.title || "").toLowerCase().includes(q))
+      ? base.filter((item) => {
+          const title = (item.title || "").toLowerCase();
+          const ingredients = (item.ingredients || "").toLowerCase();
+          const category = (item.category || "").toLowerCase();
+          return (
+            title.includes(q) ||
+            ingredients.includes(q) ||
+            category.includes(q)
+          );
+        })
       : base;
 
     setFiltered(searched);
   }, [recipes, search, selectedCategory]);
 
-  // =========================
-  // LOGOUT
-  // =========================
   const logout = async () => {
     await AsyncStorage.removeItem("user");
     navigation.replace("Login");
@@ -117,50 +125,61 @@ export default function Home({ navigation }: Props) {
   if (loading) {
     return (
       <View style={styles.loader}>
-        <ActivityIndicator size="large" color="#ff6347" />
+        <ActivityIndicator size="large" color="#4f9980" />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {/* TOP BAR */}
-      <View style={styles.topBar}>
-        <TextInput
-          placeholder="Search recipes..."
-          value={search}
-          onChangeText={setSearch}
-          style={styles.search}
-        />
-
-        <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* CATEGORY */}
-      <FlatList
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        data={categories}
-        keyExtractor={(i) => i}
-        style={styles.categoriesList}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() => setSelectedCategory(item)}
-            style={[styles.categoryBtn, selectedCategory === item && styles.categoryActive]}
-          >
-            <Text style={selectedCategory === item ? styles.categoryActive : styles.category}>
-              {item}
-            </Text>
-          </TouchableOpacity>
-        )}
-      />
-
-      {/* RECIPES */}
       <FlatList
         data={filtered}
         keyExtractor={(i) => i.id}
+        ListHeaderComponent={() => (
+          <>
+            <View style={styles.topBar}>
+              <TextInput
+                placeholder="Search title, ingredients, or category..."
+                value={search}
+                onChangeText={setSearch}
+                style={styles.search}
+              />
+
+              <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
+                <Text style={styles.logoutText}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.categoriesWrapper}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.categoriesContent}
+              >
+                {categories.map((item) => (
+                  <TouchableOpacity
+                    key={item}
+                    onPress={() => setSelectedCategory(item)}
+                    style={[
+                      styles.categoryBtn,
+                      selectedCategory === item && styles.categoryActive,
+                    ]}
+                  >
+                    <Text
+                      style={
+                        selectedCategory === item
+                          ? styles.categoryActiveText
+                          : styles.categoryText
+                      }
+                    >
+                      {item}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </>
+        )}
         renderItem={({ item }) => (
           <View style={styles.card}>
             <Image source={{ uri: item.image }} style={styles.image} />
@@ -191,8 +210,8 @@ export default function Home({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f6f6f6",
-    padding: 15,
+    backgroundColor: "#effaf3",
+    padding: 16,
   },
 
   loader: {
@@ -201,120 +220,135 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
+  topBar: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+    marginBottom: 16,
+    backgroundColor: "#e5f7f0",
+    borderRadius: 22,
+    padding: 12,
+    shadowColor: "#8bcfb5",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+
+  categoriesWrapper: {
+    marginBottom: 16,
+  },
+
+  categoriesContent: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+
   search: {
     backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 12,
-    elevation: 2,
+    padding: 14,
+    borderRadius: 18,
+    flex: 1,
+    fontSize: 14,
+    shadowColor: "#afe7d3",
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
   },
 
   categoryBtn: {
-    backgroundColor: "#f2f2f2",
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 15,
-    marginRight: 8,
-    height: 34,
+    backgroundColor: "#c7e8d7",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    marginRight: 10,
+    height: 36,
     justifyContent: "center",
     alignItems: "center",
   },
 
   categoryActive: {
-    backgroundColor: "#ff6347",
+    backgroundColor: "#6fc4a6",
+  },
+
+  categoryActiveText: {
+    color: "#fff",
+    fontWeight: "700",
+  },
+
+  categoryText: {
+    color: "#3f5f54",
+    fontWeight: "700",
   },
 
   card: {
     backgroundColor: "#fff",
-    borderRadius: 15,
-    marginBottom: 15,
+    borderRadius: 24,
+    marginBottom: 18,
     overflow: "hidden",
-    elevation: 3,
+    shadowColor: "#94c9b7",
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
 
   image: {
     width: "100%",
-    height: 180,
+    height: 200,
   },
 
   cardContent: {
-    padding: 12,
+    padding: 16,
   },
 
   title: {
-    fontSize: 18,
-    fontWeight: "bold",
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#4f374b",
+    marginBottom: 8,
   },
 
   category: {
-    color: "#ff6347",
-    marginBottom: 5,
-    fontWeight: "bold",
+    color: "#5a9d80",
+    marginBottom: 8,
+    fontWeight: "700",
   },
 
   ingredients: {
-    color: "#555",
-    marginBottom: 5,
-  },
-
-  seeMoreIngredient: {
-    color: "#ff6347",
-    fontWeight: "bold",
-    marginBottom: 10,
+    color: "#6d5d6e",
+    marginBottom: 12,
+    lineHeight: 20,
   },
 
   actions: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
   },
 
   editBtn: {
-    backgroundColor: "#4a90e2",
-    padding: 8,
-    borderRadius: 8,
-    flex: 1,
-    marginRight: 5,
-    alignItems: "center",
-  },
-
-  deleteBtn: {
-    backgroundColor: "#e74c3c",
-    padding: 8,
-    borderRadius: 8,
-    flex: 1,
-    marginLeft: 5,
+    backgroundColor: "#5fae93",
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 18,
     alignItems: "center",
   },
 
   btnText: {
     color: "#fff",
-    fontWeight: "bold",
+    fontWeight: "800",
   },
 
-  seeMoreBtn: {
-    padding: 12,
-    backgroundColor: "#ff6347",
-    borderRadius: 10,
-    alignItems: "center",
-    marginVertical: 10,
-  },
-
-  seeMoreText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  
   logoutBtn: {
-  backgroundColor: "#e74c3c",
-  padding: 10,
-  borderRadius: 10,
-  alignSelf: "flex-end",
-  marginBottom: 10,
-},
+    backgroundColor: "#4b8f7e",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    alignSelf: "flex-end",
+  },
 
-logoutText: {
-  color: "#fff",
-  fontWeight: "bold",
-},
-  
+  logoutText: {
+    color: "#fff",
+    fontWeight: "800",
+  },
 });
+

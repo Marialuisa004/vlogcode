@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  ImageBackground,
   View,
   Text,
   TextInput,
@@ -8,8 +9,13 @@ import {
   Alert,
 } from "react-native";
 
+import { Image } from "react-native";
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../lib/supabase";
+
+const bgImage = require("../assets/image.png");
+const logoImage = require("../assets/logo.png");
 
 export default function Login({ navigation }: any) {
   const [username, setUsername] = useState("");
@@ -59,43 +65,53 @@ export default function Login({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
+    <ImageBackground
+      source={bgImage}
+      style={styles.container}
+      imageStyle={styles.backgroundImage}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay} />
+      <View style={styles.inner}>
+        <Image
+          source={logoImage}
+          style={styles.logo}
+        />
+        <Text style={styles.title}>Login</Text>
 
-      <Text style={styles.title}>Login</Text>
+        <TextInput
+          placeholder="Username"
+          value={username}
+          onChangeText={setUsername}
+          style={styles.input}
+        />
 
-      <TextInput
-        placeholder="Username"
-        value={username}
-        onChangeText={setUsername}
-        style={styles.input}
-      />
+        <TextInput
+          placeholder="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          style={styles.input}
+        />
 
-      <TextInput
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        style={styles.input}
-      />
+        <TouchableOpacity
+          style={styles.button}
+          onPress={login}
+        >
+          <Text style={styles.buttonText}>
+            Login
+          </Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={login}
-      >
-        <Text style={styles.buttonText}>
-          Login
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        onPress={() => navigation.navigate("Register")}
-      >
-        <Text style={styles.link}>
-          Create New Account
-        </Text>
-      </TouchableOpacity>
-
-    </View>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("Register")}
+        >
+          <Text style={styles.link}>
+            Create New Account
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </ImageBackground>
   );
 }
 
@@ -104,7 +120,39 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     padding: 20,
-    backgroundColor: "#f6f6f6",
+    width: "100%",
+    height: "100%",
+  },
+
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.25)",
+  },
+
+  inner: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: "rgba(255,255,255,0.86)",
+    borderRadius: 24,
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 6,
+  },
+
+  backgroundImage: {
+    resizeMode: "cover",
+    width: "100%",
+    height: "100%",
+  },
+
+  logo: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignSelf: "center",
+    marginBottom: 12,
   },
 
   title: {
