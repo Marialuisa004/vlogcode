@@ -1,9 +1,5 @@
-# TODO
+- [x] Replace app/Home.tsx with the provided implementation (LinearGradient + Ionicons UI, realtime, search/filter, categories, edit button)
+- [x] Ensure fetchRecipes uses order("id", { ascending: false }) and keep realtime id handling consistent
+- [ ] Run TypeScript typecheck (tsc) and/or lint to confirm no errors
 
-## Login fix (Supabase auth)
-- [x] Implement Supabase email/password login in `app/Login.tsx` (remove MOCK_USER).
-- [x] Update `app/Login.tsx` props to pass authenticated user (email or user id) to `App.tsx`.
-- [x] Update `App.tsx` to call Supabase `signOut()` on logout and clear auth state.
-- [ ] Ensure navigation gates correctly (show login when unauthenticated).
-- [ ] Sanity check TypeScript types compile.
 

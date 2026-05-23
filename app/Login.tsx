@@ -73,11 +73,13 @@ export default function Login({ navigation }: any) {
     >
       <View style={styles.overlay} />
       <View style={styles.inner}>
+        <View style={styles.cardTop} />
         <Image
           source={logoImage}
           style={styles.logo}
         />
-        <Text style={styles.title}>Login</Text>
+        <Text style={styles.title}>TasteList</Text>
+
 
         <TextInput
           placeholder="Username"
@@ -122,6 +124,7 @@ const styles = StyleSheet.create({
     padding: 20,
     width: "100%",
     height: "100%",
+    backgroundColor: "#FFF4E6",
   },
 
   overlay: {
@@ -133,12 +136,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     padding: 24,
-    backgroundColor: "rgba(255,255,255,0.86)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 24,
     shadowColor: "#000",
     shadowOpacity: 0.12,
     shadowRadius: 20,
     elevation: 6,
+  },
+
+  cardTop: {
+    position: "absolute",
+    top: -40,
+    left: 0,
+    right: 0,
+    height: 0,
   },
 
   backgroundImage: {
@@ -160,18 +171,25 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 30,
-    color: "#ff6347",
+    color: "#4B3248",
   },
 
   input: {
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     padding: 15,
     borderRadius: 12,
     marginBottom: 15,
+    borderWidth: 1,
+    borderColor: "#FFD6B0",
+  },
+
+  placeholder: {
+    color: "#9CA3AF",
   },
 
   button: {
-    backgroundColor: "#ff6347",
+    backgroundColor: "#FF7A00",
+
     padding: 15,
     borderRadius: 12,
     alignItems: "center",

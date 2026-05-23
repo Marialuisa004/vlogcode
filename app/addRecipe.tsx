@@ -22,9 +22,9 @@ export default function AddRecipe({ navigation }: any) {
 
   const categories = ["Breakfast", "Lunch", "Dinner", "Dessert"];
 
-  // 📸 PICK IMAGE
   const pickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
       Alert.alert("Permission required", "Allow access to photos");
@@ -41,16 +41,12 @@ export default function AddRecipe({ navigation }: any) {
     }
   };
 
-  // ☁️ UPLOAD IMAGE TO SUPABASE STORAGE
   const uploadImage = async (uri: string) => {
     try {
       const fileName = `${Date.now()}.jpg`;
 
       const response = await fetch(uri);
-      if (!response.ok) {
-        console.log("[AddRecipe] fetch image failed:", response.status, response.statusText);
-        return null;
-      }
+      if (!response.ok) return null;
 
       const blob = await response.blob();
 
@@ -61,33 +57,19 @@ export default function AddRecipe({ navigation }: any) {
           upsert: true,
         });
 
-      if (error) {
-        console.log("[AddRecipe] UPLOAD ERROR:", error.message);
-        return null;
-      }
+      if (error) return null;
 
       const { data } = supabase.storage
         .from("recipe-images")
         .getPublicUrl(fileName);
 
       return data.publicUrl;
-    } catch (e: any) {
-      console.log("[AddRecipe] uploadImage exception:", e);
+    } catch (e) {
       return null;
     }
   };
 
-  // 💾 SAVE RECIPE
   const addRecipe = async () => {
-    console.log("[AddRecipe] Save pressed", {
-      titlePresent: !!title,
-      ingredientsPresent: !!ingredients,
-      stepsPresent: !!steps,
-      categoryPresent: !!category,
-      imagePresent: !!image,
-      loading,
-    });
-
     if (!title || !ingredients || !steps || !category || !image) {
       Alert.alert("Missing Fields", "Please complete all fields");
       return;
@@ -97,38 +79,28 @@ export default function AddRecipe({ navigation }: any) {
       setLoading(true);
 
       const imageUrl = await uploadImage(image);
-
       if (!imageUrl) {
         Alert.alert("Error", "Image upload failed");
         return;
       }
 
-      console.log("[AddRecipe] Inserting recipe with image url:", imageUrl);
-
-      const { data, error } = await supabase
-        .from("recipes")
-        .insert([
-          {
-            title,
-            ingredients,
-            steps,
-            category,
-            image: imageUrl,
-          },
-        ]);
+      const { error } = await supabase.from("recipes").insert([
+        {
+          title,
+          ingredients,
+          steps,
+          category,
+          image: imageUrl,
+        },
+      ]);
 
       if (error) {
-        console.log("[AddRecipe] Insert error:", error);
         Alert.alert("Error", error.message);
         return;
       }
 
-      console.log("[AddRecipe] Insert success:", data);
       Alert.alert("Success", "Recipe added!");
       navigation.goBack();
-    } catch (e: any) {
-      console.log("[AddRecipe] Unexpected error:", e);
-      Alert.alert("Error", e?.message ?? "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -136,11 +108,11 @@ export default function AddRecipe({ navigation }: any) {
 
   return (
     <ScrollView style={styles.container}>
-
       <Text style={styles.header}>Add Recipe</Text>
 
       <TextInput
         placeholder="Title"
+        placeholderTextColor="#9CA3AF"
         value={title}
         onChangeText={setTitle}
         style={styles.input}
@@ -148,6 +120,7 @@ export default function AddRecipe({ navigation }: any) {
 
       <TextInput
         placeholder="Ingredients"
+        placeholderTextColor="#9CA3AF"
         value={ingredients}
         onChangeText={setIngredients}
         style={[styles.input, { height: 100 }]}
@@ -156,13 +129,15 @@ export default function AddRecipe({ navigation }: any) {
 
       <TextInput
         placeholder="Cooking Steps"
+        placeholderTextColor="#9CA3AF"
         value={steps}
         onChangeText={setSteps}
         style={[styles.input, { height: 120 }]}
         multiline
       />
 
-      {/* CATEGORY */}
+      <Text style={styles.label}>Category</Text>
+
       <View style={styles.categoryRow}>
         {categories.map((item) => (
           <TouchableOpacity
@@ -173,60 +148,71 @@ export default function AddRecipe({ navigation }: any) {
               category === item && styles.catActive,
             ]}
           >
-            <Text style={{ color: category === item ? "#fff" : "#333" }}>
+            <Text
+              style={{
+                color: category === item ? "#FFFFFF" : "#4B3248",
+                fontWeight: "700",
+              }}
+            >
               {item}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* IMAGE */}
       <TouchableOpacity style={styles.imageBtn} onPress={pickImage}>
-        <Text style={{ color: "#fff" }}>Pick Image</Text>
+        <Text style={{ color: "#fff", fontWeight: "700" }}>
+          Pick Image
+        </Text>
       </TouchableOpacity>
 
       {image && <Image source={{ uri: image }} style={styles.preview} />}
 
-      {/* SAVE */}
       <TouchableOpacity
         style={styles.saveBtn}
         onPress={addRecipe}
         disabled={loading}
       >
-        <Text style={{ color: "#fff", fontWeight: "bold" }}>
+        <Text style={styles.saveText}>
           {loading ? "Saving..." : "Save Recipe"}
         </Text>
       </TouchableOpacity>
-
     </ScrollView>
   );
 }
 
+/* =========================
+   THEME DESIGN
+========================= */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "#f3fcf6",
+    backgroundColor: "#FFF4E6",
   },
 
   header: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "800",
     marginBottom: 20,
-    color: "#3c7d68",
+    color: "#4B3248",
+  },
+
+  label: {
+    fontWeight: "700",
+    marginBottom: 8,
+    marginTop: 10,
+    color: "#4F9980",
   },
 
   input: {
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     padding: 14,
-    borderRadius: 18,
+    borderRadius: 16,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: "#b8e6d5",
-    shadowColor: "#9cd3c1",
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 2,
+    borderColor: "#E8D9C8",
+    color: "#4B3248",
   },
 
   categoryRow: {
@@ -238,48 +224,44 @@ const styles = StyleSheet.create({
   catBtn: {
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: "#cde9d8",
-    borderRadius: 24,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
     marginRight: 10,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#E8D9C8",
   },
 
   catActive: {
-    backgroundColor: "#72b99e",
+    backgroundColor: "#4F9980",
+    borderColor: "#4F9980",
   },
 
   imageBtn: {
-    backgroundColor: "#4d9c7a",
+    backgroundColor: "#FF7A00",
     padding: 14,
-    borderRadius: 20,
+    borderRadius: 18,
     alignItems: "center",
     marginBottom: 14,
-    shadowColor: "#7fc6a7",
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 4,
   },
 
   preview: {
     width: "100%",
     height: 210,
-    borderRadius: 20,
+    borderRadius: 18,
     marginBottom: 14,
   },
 
   saveBtn: {
-    backgroundColor: "#459c80",
+    backgroundColor: "#FF7A00",
     padding: 16,
-    borderRadius: 24,
+    borderRadius: 18,
     alignItems: "center",
-    shadowColor: "#7fc6a7",
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 4,
+    marginTop: 10,
   },
 
   saveText: {
-    color: "#fff",
+    color: "#FFFFFF",
     fontWeight: "800",
   },
 });

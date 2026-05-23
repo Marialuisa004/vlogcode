@@ -63,6 +63,7 @@ export default function EditRecipe({ route, navigation }: any) {
         value={title}
         onChangeText={setTitle}
         placeholder="Title"
+        placeholderTextColor="#999"
         style={styles.input}
       />
 
@@ -70,6 +71,7 @@ export default function EditRecipe({ route, navigation }: any) {
         value={ingredients}
         onChangeText={setIngredients}
         placeholder="Ingredients"
+        placeholderTextColor="#999"
         multiline
         style={[styles.input, { height: 100 }]}
       />
@@ -78,6 +80,7 @@ export default function EditRecipe({ route, navigation }: any) {
         value={steps}
         onChangeText={setSteps}
         placeholder="Cooking Steps"
+        placeholderTextColor="#999"
         multiline
         style={[styles.input, { height: 120 }]}
       />
@@ -89,9 +92,19 @@ export default function EditRecipe({ route, navigation }: any) {
           <TouchableOpacity
             key={item}
             onPress={() => setCategory(item)}
-            style={[styles.catBtn, category === item && styles.catActive]}
+            style={[
+              styles.catBtn,
+              category === item && styles.catActive,
+            ]}
           >
-            <Text style={{ color: category === item ? "#fff" : "#333" }}>{item}</Text>
+            <Text
+              style={{
+                color: category === item ? "#FFFFFF" : "#4B3248",
+                fontWeight: "700",
+              }}
+            >
+              {item}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -102,16 +115,16 @@ export default function EditRecipe({ route, navigation }: any) {
 
       <TouchableOpacity
         style={styles.deleteBtn}
-        onPress={() => {
-          Alert.alert("Confirm delete", "Are you sure you want to delete this recipe?", [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Delete",
-              style: "destructive",
-              onPress: () => deleteRecipe(),
-            },
-          ]);
-        }}
+        onPress={() =>
+          Alert.alert(
+            "Confirm delete",
+            "Are you sure you want to delete this recipe?",
+            [
+              { text: "Cancel", style: "cancel" },
+              { text: "Delete", style: "destructive", onPress: deleteRecipe },
+            ]
+          )
+        }
       >
         <Text style={styles.deleteText}>Delete Recipe</Text>
       </TouchableOpacity>
@@ -119,38 +132,38 @@ export default function EditRecipe({ route, navigation }: any) {
   );
 }
 
+/* =========================
+   THEME STYLES
+========================= */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f3fcf6",
+    backgroundColor: "#FFF4E6",
     padding: 18,
   },
 
   header: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "800",
     marginBottom: 18,
-    color: "#3c7d68",
+    color: "#4B3248",
   },
 
   label: {
     fontWeight: "700",
     marginTop: 10,
     marginBottom: 8,
-    color: "#4a6a5d",
+    color: "#4F9980",
   },
 
   input: {
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     padding: 14,
-    borderRadius: 20,
+    borderRadius: 16,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: "#b8e6d5",
-    shadowColor: "#9cd3c1",
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 2,
+    borderColor: "#E8D9C8",
+    color: "#4B3248",
   },
 
   categoryRow: {
@@ -162,48 +175,44 @@ const styles = StyleSheet.create({
   catBtn: {
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: "#cde9d8",
-    borderRadius: 24,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
     marginRight: 10,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#E8D9C8",
   },
 
   catActive: {
-    backgroundColor: "#72b99e",
+    backgroundColor: "#4F9980",
+    borderColor: "#4F9980",
   },
 
   saveBtn: {
-    backgroundColor: "#459c80",
+    backgroundColor: "#FF7A00",
     padding: 16,
-    borderRadius: 24,
+    borderRadius: 18,
     alignItems: "center",
     marginTop: 10,
-    shadowColor: "#7fc6a7",
-    shadowOpacity: 0.22,
-    shadowRadius: 12,
-    elevation: 4,
   },
 
   saveText: {
-    color: "#fff",
+    color: "#FFFFFF",
     fontWeight: "800",
   },
 
   deleteBtn: {
-    backgroundColor: "#44846e",
+    backgroundColor: "#FFFFFF",
     padding: 16,
-    borderRadius: 24,
+    borderRadius: 18,
     alignItems: "center",
     marginTop: 14,
-    shadowColor: "#7fc6a7",
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: "#FF7A00",
   },
 
   deleteText: {
-    color: "#fff",
+    color: "#FF7A00",
     fontWeight: "800",
   },
 });
-

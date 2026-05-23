@@ -11,35 +11,10 @@ import {
 } from "react-native";
 
 import { supabase } from "../lib/supabase";
-
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const bgImage = require("../assets/image.png");
 const logoImage = require("../assets/logo.png");
-
-async function registerImageToSupabase() {
-  // Expo web can’t upload bundled require() assets directly.
-  // Instead, create a fetchable URL for the local bundled asset.
-  const asset = require("../assets/image.png");
-  const localUri = (typeof asset === "string" ? asset : (asset as any)?.uri) || asset;
-
-  const response = await fetch(localUri);
-  const blob = await response.blob();
-
-  const fileName = `avatar-${Date.now()}.png`;
-
-  const { error: uploadError } = await supabase.storage
-    .from("recipe-images")
-    .upload(fileName, blob, { contentType: "image/png" });
-
-  if (uploadError) {
-    throw uploadError;
-  }
-
-  const { data } = supabase.storage.from("recipe-images").getPublicUrl(fileName);
-  return data.publicUrl as string;
-}
-
 
 export default function Register({ navigation }: any) {
   const [username, setUsername] = useState("");
@@ -74,36 +49,66 @@ export default function Register({ navigation }: any) {
       imageStyle={styles.backgroundImage}
       resizeMode="cover"
     >
+      {/* SOFT OVERLAY */}
       <View style={styles.overlay} />
+
+      {/* MAIN CARD */}
       <View style={styles.inner}>
-        {/* Circle Logo */}
+        {/* LOGO */}
         <View style={styles.logoCircle}>
           <Image source={logoImage} style={styles.logo} />
         </View>
-        <Text style={styles.title}>Register</Text>
 
+        {/* TITLE */}
+        <Text style={styles.title}>Create Account</Text>
+
+        <Text style={styles.subtitle}>
+          Start saving your delicious recipes 🍳
+        </Text>
+
+        {/* USERNAME */}
+        <Text style={styles.label}>Username</Text>
 
         <TextInput
-          placeholder="Username"
+          placeholder="Enter username"
+          placeholderTextColor="#9CA3AF"
           value={username}
           onChangeText={setUsername}
           style={styles.input}
         />
 
+        {/* PASSWORD */}
+        <Text style={styles.label}>Password</Text>
+
         <TextInput
-          placeholder="Password"
+          placeholder="Enter password"
+          placeholderTextColor="#9CA3AF"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
           style={styles.input}
         />
 
-        <TouchableOpacity style={styles.button} onPress={register}>
-          <Text style={styles.buttonText}>Register</Text>
+        {/* BUTTON */}
+        <TouchableOpacity
+          style={styles.button}
+          onPress={register}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.buttonText}>
+            Register
+          </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-          <Text style={styles.link}>Already have an account?</Text>
+        {/* LOGIN LINK */}
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate("Login")
+          }
+        >
+          <Text style={styles.link}>
+            Already have an account? Login
+          </Text>
         </TouchableOpacity>
       </View>
     </ImageBackground>
@@ -111,83 +116,151 @@ export default function Register({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+  /* MAIN CONTAINER */
   container: {
     flex: 1,
     justifyContent: "center",
     padding: 20,
+    backgroundColor: "#FFF4E6",
   },
 
+  /* DARK OVERLAY */
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.25)",
+    backgroundColor: "rgba(0,0,0,0.18)",
   },
 
+  /* MAIN CARD */
   inner: {
-    flex: 1,
-    justifyContent: "center",
-    padding: 24,
-    backgroundColor: "rgba(255,255,255,0.86)",
-    borderRadius: 24,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderRadius: 30,
+    padding: 28,
+
     shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    elevation: 6,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+
+    elevation: 5,
   },
 
+  /* BACKGROUND IMAGE */
   backgroundImage: {
     opacity: 1,
   },
 
+  /* LOGO CIRCLE */
   logoCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignSelf: "center",
-    backgroundColor: "rgba(255,255,255,0.9)",
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+
+    backgroundColor: "#FFF4E6",
+
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 12,
+
+    alignSelf: "center",
+
+    marginBottom: 18,
+
+    borderWidth: 3,
+    borderColor: "#FF7A00",
   },
 
+  /* LOGO */
   logo: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 60,
+    height: 60,
     resizeMode: "contain",
   },
 
+  /* TITLE */
   title: {
-    fontSize: 32,
-    fontWeight: "bold",
+    fontSize: 30,
+    fontWeight: "800",
     textAlign: "center",
-    marginBottom: 30,
-    color: "#ff6347",
+    color: "#4B3248",
+    marginBottom: 8,
   },
 
+  /* SUBTITLE */
+  subtitle: {
+    textAlign: "center",
+    color: "#4F9980",
+    marginBottom: 28,
+    fontSize: 15,
+    fontWeight: "600",
+  },
+
+  /* LABELS */
+  label: {
+    color: "#4B3248",
+    fontWeight: "700",
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+
+  /* INPUT */
   input: {
-    backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 15,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#FFD6B0",
+
+    paddingHorizontal: 16,
+    height: 55,
+
+    borderRadius: 18,
+
+    marginBottom: 18,
+
+    fontSize: 15,
+    color: "#4B3248",
   },
 
+  /* REGISTER BUTTON */
   button: {
-    backgroundColor: "#ff6347",
-    padding: 15,
-    borderRadius: 12,
+    backgroundColor: "#FF7A00",
+
+    height: 55,
+
+    borderRadius: 18,
+
+    justifyContent: "center",
     alignItems: "center",
+
+    marginTop: 8,
+
+    shadowColor: "#FF7A00",
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+
+    elevation: 4,
   },
 
+  /* BUTTON TEXT */
   buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontWeight: "800",
+    fontSize: 16,
   },
 
+  /* LOGIN LINK */
   link: {
     textAlign: "center",
-    marginTop: 20,
-    color: "#4a90e2",
-    fontWeight: "bold",
+    marginTop: 22,
+
+    color: "#4F9980",
+
+    fontWeight: "700",
+    fontSize: 14,
   },
 });
-
