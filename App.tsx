@@ -32,6 +32,8 @@ function Tabs() {
             iconName = "home"; // 🏠
           } else if (route.name === "Add Recipe") {
             iconName = "add-circle"; // ➕
+          } else if (route.name === "Profile") {
+            iconName = "person"; // 👤
           }
 
           return (
@@ -49,6 +51,10 @@ function Tabs() {
         name="Add Recipe"
         component={AddRecipe}
       />
+        <Tab.Screen
+        name="Profile"
+        component={require("./app/Profile").default}
+        />
     </Tab.Navigator>
   );
 }

@@ -7,7 +7,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
+ ActivityIndicator,
   ScrollView,
 } from "react-native";
 import { supabase } from "../lib/supabase";
@@ -30,61 +30,114 @@ export default function Home({ navigation }: Props) {
   const [filtered, setFiltered] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedCategory, setSelectedCategory] =
+    useState("All");
 
+  const categories = [
+    "All",
+    "Breakfast",
+    "Lunch",
+    "Dinner",
+    "Dessert",
+  ];
 
-  const categories = ["All", "Breakfast", "Lunch", "Dinner", "Dessert"];
-
+  // =========================
+  // FETCH RECIPES
+  // =========================
   const fetchRecipes = async (showLoader = false) => {
     if (showLoader) {
       setLoading(true);
     }
 
-    const { data, error } = await supabase.from("recipes").select("*");
+    const { data, error } = await supabase
+      .from("recipes")
+      .select("*");
 
     if (error) {
       console.log("FETCH ERROR:", error.message);
       setLoading(false);
       return;
     }
-    // Normalize IDs to strings (DB may return numbers) and update filtered list
-    const normalized = (data || []).map((d: any) => ({ ...d, id: String(d.id) })) as Recipe[];
+
+    const normalized = (data || []).map((d: any) => ({
+      ...d,
+      id: String(d.id),
+    })) as Recipe[];
+
     setRecipes(normalized);
     setFiltered(normalized);
     setLoading(false);
   };
 
+  // =========================
+  // REFRESH WHEN SCREEN FOCUS
+  // =========================
   useFocusEffect(
     useCallback(() => {
       fetchRecipes(true);
     }, [])
   );
 
+  // =========================
+  // REALTIME
+  // =========================
   useEffect(() => {
     const channel = supabase
       .channel("recipes-realtime")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "recipes" },
+        {
+          event: "*",
+          schema: "public",
+          table: "recipes",
+        },
         (payload) => {
           console.log("REALTIME:", payload);
 
+          // INSERT
           if (payload.eventType === "INSERT") {
             setRecipes((prev) => {
-              const exists = prev.some((r) => r.id === (payload as any).new.id);
+              const exists = prev.some(
+                (r) =>
+                  r.id === String((payload as any).new.id)
+              );
+
               if (exists) return prev;
-              return [(payload as any).new as Recipe, ...prev];
+
+              return [
+                {
+                  ...(payload as any).new,
+                  id: String((payload as any).new.id),
+                } as Recipe,
+                ...prev,
+              ];
             });
           }
 
+          // DELETE
           if (payload.eventType === "DELETE") {
-            setRecipes((prev) => prev.filter((item) => item.id !== (payload as any).old.id));
+            setRecipes((prev) =>
+              prev.filter(
+                (item) =>
+                  item.id !==
+                  String((payload as any).old.id)
+              )
+            );
           }
 
+          // UPDATE
           if (payload.eventType === "UPDATE") {
             setRecipes((prev) =>
               prev.map((item) =>
-                item.id === (payload as any).new.id ? ((payload as any).new as Recipe) : item
+                item.id ===
+                String((payload as any).new.id)
+                  ? ({
+                      ...(payload as any).new,
+                      id: String(
+                        (payload as any).new.id
+                      ),
+                    } as Recipe)
+                  : item
               )
             );
           }
@@ -97,40 +150,66 @@ export default function Home({ navigation }: Props) {
     };
   }, []);
 
+  // =========================
+  // SEARCH + CATEGORY FILTER
+  // =========================
   useEffect(() => {
-    const base =
-      selectedCategory === "All"
-        ? recipes
-        : recipes.filter((r) => (r.category || "") === selectedCategory);
+    let filteredRecipes = recipes;
 
-    const q = search.trim().toLowerCase();
+    // CATEGORY FILTER
+    if (selectedCategory !== "All") {
+      filteredRecipes = filteredRecipes.filter(
+        (recipe) =>
+          recipe.category?.toLowerCase() ===
+          selectedCategory.toLowerCase()
+      );
+    }
 
-    // Always compute filtered; if search is empty show full list.
-    const searched = q.length
-      ? base.filter((item) => {
-          const title = (item.title || "").toLowerCase();
-          const ingredients = (item.ingredients || "").toLowerCase();
-          const category = (item.category || "").toLowerCase();
+    // SEARCH FILTER
+    if (search.trim() !== "") {
+      filteredRecipes = filteredRecipes.filter(
+        (recipe) => {
+          const searchText = search.toLowerCase();
+
           return (
-            title.includes(q) ||
-            ingredients.includes(q) ||
-            category.includes(q)
+            recipe.title
+              ?.toLowerCase()
+              .includes(searchText) ||
+            recipe.ingredients
+              ?.toLowerCase()
+              .includes(searchText) ||
+            recipe.category
+              ?.toLowerCase()
+              .includes(searchText) ||
+            recipe.steps
+              ?.toLowerCase()
+              .includes(searchText)
           );
-        })
-      : base;
+        }
+      );
+    }
 
-    setFiltered(searched);
-  }, [recipes, search, selectedCategory]);
+    setFiltered(filteredRecipes);
+  }, [search, selectedCategory, recipes]);
 
+  // =========================
+  // LOGOUT
+  // =========================
   const logout = async () => {
     await AsyncStorage.removeItem("user");
     navigation.replace("Login");
   };
 
+  // =========================
+  // LOADER
+  // =========================
   if (loading) {
     return (
       <View style={styles.loader}>
-        <ActivityIndicator size="large" color="#4f9980" />
+        <ActivityIndicator
+          size="large"
+          color="#4f9980"
+        />
       </View>
     );
   }
@@ -140,47 +219,56 @@ export default function Home({ navigation }: Props) {
       <FlatList
         data={filtered}
         keyExtractor={(i) => i.id}
+        showsVerticalScrollIndicator={false}
         ListHeaderComponent={() => (
           <>
+            {/* TOP BAR */}
             <View style={styles.topBar}>
               <TextInput
-                placeholder="Search title, ingredients, or category..."
+                placeholder="Search recipes..."
+                placeholderTextColor="#7a9b8e"
                 value={search}
-                onChangeText={setSearch}
+                onChangeText={(text) =>
+                  setSearch(text)
+                }
                 style={styles.search}
                 keyboardType="default"
                 autoCorrect={false}
                 autoCapitalize="none"
-                autoFocus
-                selectTextOnFocus
                 returnKeyType="search"
+                clearButtonMode="while-editing"
               />
-
+              
+              {/* LOGOUT */}
               <TouchableOpacity
-                onPress={() => navigation.navigate("Profile")}
+                onPress={logout}
                 style={styles.logoutBtn}
               >
-                <Text style={styles.logoutText}>Profile</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
-                <Text style={styles.logoutText}>Logout</Text>
+                <Text style={styles.logoutText}>
+                  Logout
+                </Text>
               </TouchableOpacity>
             </View>
 
+            {/* CATEGORY */}
             <View style={styles.categoriesWrapper}>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.categoriesContent}
+                contentContainerStyle={
+                  styles.categoriesContent
+                }
               >
                 {categories.map((item) => (
                   <TouchableOpacity
                     key={item}
-                    onPress={() => setSelectedCategory(item)}
+                    onPress={() =>
+                      setSelectedCategory(item)
+                    }
                     style={[
                       styles.categoryBtn,
-                      selectedCategory === item && styles.categoryActive,
+                      selectedCategory === item &&
+                        styles.categoryActive,
                     ]}
                   >
                     <Text
@@ -200,24 +288,63 @@ export default function Home({ navigation }: Props) {
         )}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Image source={{ uri: item.image }} style={styles.image} />
+            <Image
+              source={{ uri: item.image }}
+              style={styles.image}
+            />
 
             <View style={styles.cardContent}>
-              <Text style={styles.title}>{item.title}</Text>
-              <Text style={styles.category}>{item.category}</Text>
-              <Text numberOfLines={2} style={styles.ingredients}>
+              <Text style={styles.title}>
+                {item.title}
+              </Text>
+
+              <Text style={styles.category}>
+                {item.category}
+              </Text>
+
+              <Text
+                numberOfLines={2}
+                style={styles.ingredients}
+              >
                 {item.ingredients}
               </Text>
 
               <View style={styles.actions}>
                 <TouchableOpacity
-                  onPress={() => navigation.navigate("EditRecipe", { recipe: item })}
+                  onPress={() =>
+                    navigation.navigate(
+                      "EditRecipe",
+                      {
+                        recipe: item,
+                      }
+                    )
+                  }
                   style={styles.editBtn}
                 >
-                  <Text style={styles.btnText}>Edit</Text>
+                  <Text style={styles.btnText}>
+                    Edit
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
+          </View>
+        )}
+        ListEmptyComponent={() => (
+          <View
+            style={{
+              alignItems: "center",
+              marginTop: 50,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: "700",
+                color: "#5a9d80",
+              }}
+            >
+              No recipes found
+            </Text>
           </View>
         )}
       />
@@ -369,4 +496,3 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 });
-

@@ -78,61 +78,71 @@ export default function AddRecipe({ navigation }: any) {
   };
 
   // 💾 SAVE RECIPE
-  const addRecipe = async () => {
-    console.log("[AddRecipe] Save pressed", {
-      titlePresent: !!title,
-      ingredientsPresent: !!ingredients,
-      stepsPresent: !!steps,
-      categoryPresent: !!category,
-      imagePresent: !!image,
-      loading,
-    });
+const addRecipe = async () => {
+  // Prevent multiple taps
+  if (loading) return;
 
-    if (!title || !ingredients || !steps || !category || !image) {
-      Alert.alert("Missing Fields", "Please complete all fields");
+  // Validate fields
+  if (
+    !title.trim() ||
+    !ingredients.trim() ||
+    !steps.trim() ||
+    !category.trim() ||
+    !image
+  ) {
+    Alert.alert("Missing Fields", "Please complete all fields");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    // Upload image first
+    const imageUrl = await uploadImage(image);
+
+    if (!imageUrl) {
+      Alert.alert("Upload Failed", "Could not upload image");
+      setLoading(false);
       return;
     }
 
-    try {
-      setLoading(true);
+    // Save recipe to Supabase
+    const { error } = await supabase.from("recipes").insert([
+      {
+        title: title.trim(),
+        ingredients: ingredients.trim(),
+        steps: steps.trim(),
+        category,
+        image: imageUrl,
+      },
+    ]);
 
-      const imageUrl = await uploadImage(image);
-
-      if (!imageUrl) {
-        Alert.alert("Error", "Image upload failed");
-        return;
-      }
-
-      console.log("[AddRecipe] Inserting recipe with image url:", imageUrl);
-
-      const { data, error } = await supabase
-        .from("recipes")
-        .insert([
-          {
-            title,
-            ingredients,
-            steps,
-            category,
-            image: imageUrl,
-          },
-        ]);
-
-      if (error) {
-        console.log("[AddRecipe] Insert error:", error);
-        Alert.alert("Error", error.message);
-        return;
-      }
-
-      console.log("[AddRecipe] Insert success:", data);
-      Alert.alert("Success", "Recipe added!");
-      navigation.goBack();
-    } catch (e: any) {
-      console.log("[AddRecipe] Unexpected error:", e);
-      Alert.alert("Error", e?.message ?? "Something went wrong");
-    } finally {
+    if (error) {
+      console.log("SAVE ERROR:", error.message);
+      Alert.alert("Error", error.message);
       setLoading(false);
+      return;
     }
-  };
+
+    // Clear form
+    setTitle("");
+    setIngredients("");
+    setSteps("");
+    setCategory("");
+    setImage(null);
+
+    Alert.alert("Success", "Recipe saved successfully!");
+
+    // Go back to Home
+    navigation.navigate("Home");
+
+  } catch (err: any) {
+    console.log("ADD RECIPE ERROR:", err);
+    Alert.alert("Error", err.message || "Something went wrong");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <ScrollView style={styles.container}>
