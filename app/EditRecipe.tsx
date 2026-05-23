@@ -22,13 +22,18 @@ export default function EditRecipe({ route, navigation }: any) {
 
   const updateRecipe = async () => {
     if (!title || !ingredients || !steps || !category) {
-      Alert.alert("Missing Fields", "Please fill all fields");
+      Alert.alert("Missing Fields");
       return;
     }
 
     const { error } = await supabase
       .from("recipes")
-      .update({ title, ingredients, steps, category })
+      .update({
+        title,
+        ingredients,
+        steps,
+        category,
+      })
       .eq("id", recipe.id);
 
     if (error) {
@@ -36,22 +41,7 @@ export default function EditRecipe({ route, navigation }: any) {
       return;
     }
 
-    Alert.alert("Success", "Recipe updated!");
-    navigation.goBack();
-  };
-
-  const deleteRecipe = async () => {
-    const { error } = await supabase
-      .from("recipes")
-      .delete()
-      .eq("id", recipe.id);
-
-    if (error) {
-      Alert.alert("Error", error.message);
-      return;
-    }
-
-    Alert.alert("Deleted", "Recipe deleted successfully");
+    Alert.alert("Success", "Recipe updated");
     navigation.goBack();
   };
 
@@ -89,32 +79,49 @@ export default function EditRecipe({ route, navigation }: any) {
           <TouchableOpacity
             key={item}
             onPress={() => setCategory(item)}
-            style={[styles.catBtn, category === item && styles.catActive]}
+            style={[
+              styles.catBtn,
+              category === item && styles.catActive,
+            ]}
           >
-            <Text style={{ color: category === item ? "#fff" : "#333" }}>{item}</Text>
+            <Text
+              style={{
+                color: category === item ? "#fff" : "#333",
+              }}
+            >
+              {item}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <TouchableOpacity style={styles.saveBtn} onPress={updateRecipe}>
-        <Text style={styles.saveText}>Update Recipe</Text>
-      </TouchableOpacity>
+      <View style={{ flexDirection: "row", marginTop: 10 }}>
 
-      <TouchableOpacity
-        style={styles.deleteBtn}
-        onPress={() => {
-          Alert.alert("Confirm delete", "Are you sure you want to delete this recipe?", [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Delete",
-              style: "destructive",
-              onPress: () => deleteRecipe(),
-            },
-          ]);
-        }}
-      >
-        <Text style={styles.deleteText}>Delete Recipe</Text>
-      </TouchableOpacity>
+  {/* UPDATE BUTTON */}
+  <TouchableOpacity
+    style={[styles.saveBtn, { flex: 1, marginRight: 8 }]}
+    onPress={updateRecipe}
+  >
+    <Text style={styles.saveText}>Update Recipe</Text>
+  </TouchableOpacity>
+
+  {/* CANCEL BUTTON */}
+  <TouchableOpacity
+    style={[
+      styles.deleteBtn,
+      {
+        flex: 1,
+        marginTop: 0,
+        backgroundColor: "#9e9e9e",
+      },
+    ]}
+    onPress={() => navigation.goBack()}
+  >
+    <Text style={styles.deleteText}>Cancel</Text>
+  </TouchableOpacity>
+
+</View>
+
     </ScrollView>
   );
 }
@@ -128,29 +135,21 @@ const styles = StyleSheet.create({
 
   header: {
     fontSize: 26,
-    fontWeight: "800",
+    fontWeight: "bold",
     marginBottom: 18,
     color: "#3c7d68",
   },
 
   label: {
-    fontWeight: "700",
-    marginTop: 10,
-    marginBottom: 8,
-    color: "#4a6a5d",
+    fontWeight: "bold",
+    marginBottom: 10,
   },
 
   input: {
     backgroundColor: "#fff",
     padding: 14,
-    borderRadius: 20,
+    borderRadius: 15,
     marginBottom: 14,
-    borderWidth: 1,
-    borderColor: "#b8e6d5",
-    shadowColor: "#9cd3c1",
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 2,
   },
 
   categoryRow: {
@@ -160,12 +159,12 @@ const styles = StyleSheet.create({
   },
 
   catBtn: {
+    backgroundColor: "#ddd",
     paddingVertical: 10,
-    paddingHorizontal: 16,
-    backgroundColor: "#cde9d8",
-    borderRadius: 24,
-    marginRight: 10,
-    marginBottom: 10,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 8,
   },
 
   catActive: {
@@ -175,35 +174,23 @@ const styles = StyleSheet.create({
   saveBtn: {
     backgroundColor: "#459c80",
     padding: 16,
-    borderRadius: 24,
+    borderRadius: 20,
     alignItems: "center",
-    marginTop: 10,
-    shadowColor: "#7fc6a7",
-    shadowOpacity: 0.22,
-    shadowRadius: 12,
-    elevation: 4,
   },
 
   saveText: {
     color: "#fff",
-    fontWeight: "800",
+    fontWeight: "bold",
   },
 
   deleteBtn: {
-    backgroundColor: "#44846e",
-    padding: 16,
-    borderRadius: 24,
-    alignItems: "center",
-    marginTop: 14,
-    shadowColor: "#7fc6a7",
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 4,
-  },
+  padding: 16,
+  borderRadius: 24,
+  alignItems: "center",
+},
 
-  deleteText: {
-    color: "#fff",
-    fontWeight: "800",
-  },
+deleteText: {
+  color: "#fff",
+  fontWeight: "bold",
+},
 });
-
