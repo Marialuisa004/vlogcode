@@ -1,5 +1,5 @@
-- [x] Replace app/Home.tsx with the provided implementation (LinearGradient + Ionicons UI, realtime, search/filter, categories, edit button)
-- [x] Ensure fetchRecipes uses order("id", { ascending: false }) and keep realtime id handling consistent
-- [ ] Run TypeScript typecheck (tsc) and/or lint to confirm no errors
+- [ ] Investigate why Profile doesn’t show newly posted content
+- [x] Fix addRecipe.tsx to include `user_id` when inserting into `recipes`
+- [ ] Validate by posting a recipe and checking Profile
 
 

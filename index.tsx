@@ -7,8 +7,8 @@ import {
   SafeAreaView,
 } from 'react-native';
 
-import CategoryCard from '../components/CategoryCard';
-import { supabase } from '../lib/supabase';
+import CategoryCard from './components/CategoryCard';
+import { supabase } from './lib/supabase';
 
 export default function HomeScreen() {
   const [recipes, setRecipes] = useState<any[]>([]);

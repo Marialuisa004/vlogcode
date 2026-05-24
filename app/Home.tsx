@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -14,10 +14,10 @@ import {
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withTiming,
   withRepeat,
   withSequence,
   withSpring,
+  withTiming,
 } from "react-native-reanimated";
 
 import { supabase } from "../lib/supabase";
@@ -31,6 +31,7 @@ type Recipe = {
   ingredients: string;
   category: string;
   steps?: string;
+  user_id?: string;
 };
 
 export default function Home({ navigation }: any) {
@@ -39,39 +40,104 @@ export default function Home({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const [userId, setUserId] = useState<string | null>(null);
+  const [showMyPosts, setShowMyPosts] = useState(false);
+  const [myPosts, setMyPosts] = useState<Recipe[]>([]);
 
   const categories = useMemo(
     () => ["All", "Breakfast", "Lunch", "Dinner", "Dessert"],
     []
   );
 
-  const fetchRecipes = useCallback(async (showLoader = false) => {
-    if (showLoader) setLoading(true);
+  const normalizeRecipe = (d: any): Recipe => ({
+    ...d,
+    id: String(d.id),
+    title: String(d.title ?? ""),
+    image: String(d.image ?? ""),
+    ingredients: String(d.ingredients ?? ""),
+    category: String(d.category ?? ""),
+    steps: d.steps ? String(d.steps) : "",
+    user_id: d.user_id ? String(d.user_id) : "",
+  });
 
-    const { data, error } = await supabase.from("recipes").select("*");
+  // GET USER
+  useEffect(() => {
+    const loadUser = async () => {
+      const raw = await AsyncStorage.getItem("user");
+      if (raw) {
+        const user = JSON.parse(raw);
+        setUserId(user.id);
+      }
+    };
+    loadUser();
+  }, []);
 
-    if (error) {
-      console.log("FETCH ERROR:", error.message);
-      setLoading(false);
-      return;
+  // FETCH ALL RECIPES
+  const fetchRecipes = async () => {
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("recipes")
+      .select("*")
+      .order("id", { ascending: false });
+
+    if (!error) {
+      const normalized = (data || []).map(normalizeRecipe);
+      setRecipes(normalized);
+      setFiltered(normalized);
     }
 
-    const normalized = (data || []).map((d: any) => ({
-      ...d,
-      id: String(d.id),
-    })) as Recipe[];
-
-    setRecipes(normalized);
-    setFiltered(normalized);
     setLoading(false);
-  }, []);
+  };
+
+  // FETCH MY POSTS
+  const fetchMyPosts = async () => {
+    if (!userId) return;
+
+    const { data } = await supabase
+      .from("recipes")
+      .select("*")
+      .eq("user_id", userId)
+      .order("id", { ascending: false });
+
+    setMyPosts((data || []).map(normalizeRecipe));
+  };
 
   useFocusEffect(
     useCallback(() => {
-      fetchRecipes(true);
-    }, [fetchRecipes])
+      fetchRecipes();
+    }, [])
   );
 
+  // REALTIME
+  useEffect(() => {
+    const channel = supabase
+      .channel("recipes-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "recipes" },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const newRecipe = normalizeRecipe((payload as any).new);
+            setRecipes((prev) => [newRecipe, ...prev]);
+          }
+
+          if (payload.eventType === "DELETE") {
+            const deletedId = String((payload as any).old?.id);
+            setRecipes((prev) => prev.filter((r) => r.id !== deletedId));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // FILTER
   useEffect(() => {
     let next = recipes;
 
@@ -81,15 +147,12 @@ export default function Home({ navigation }: any) {
       );
     }
 
-    const text = search.trim().toLowerCase();
-
+    const text = search.toLowerCase();
     if (text) {
       next = next.filter(
         (r) =>
-          r.title?.toLowerCase().includes(text) ||
-          r.ingredients?.toLowerCase().includes(text) ||
-          r.category?.toLowerCase().includes(text) ||
-          r.steps?.toLowerCase().includes(text)
+          r.title.toLowerCase().includes(text) ||
+          r.ingredients.toLowerCase().includes(text)
       );
     }
 
@@ -101,19 +164,17 @@ export default function Home({ navigation }: any) {
     navigation.replace("Login");
   };
 
-  // ANIMATED IMAGE COMPONENT
+  const openMyPosts = async () => {
+    setShowMyPosts(true);
+    await fetchMyPosts();
+  };
+
   const AnimatedRecipeImage = ({ uri }: { uri: string }) => {
     const translateX = useSharedValue(-120);
     const scale = useSharedValue(0.8);
 
     useEffect(() => {
-      // swipe animation
-      translateX.value = withSpring(0, {
-        damping: 8,
-        stiffness: 90,
-      });
-
-      // bounce animation
+      translateX.value = withSpring(0);
       scale.value = withRepeat(
         withSequence(
           withTiming(1.05, { duration: 800 }),
@@ -124,14 +185,12 @@ export default function Home({ navigation }: any) {
       );
     }, []);
 
-    const animatedStyle = useAnimatedStyle(() => {
-      return {
-        transform: [
-          { translateX: translateX.value },
-          { scale: scale.value },
-        ],
-      };
-    });
+    const animatedStyle = useAnimatedStyle(() => ({
+      transform: [
+        { translateX: translateX.value },
+        { scale: scale.value },
+      ],
+    }));
 
     return (
       <Animated.View style={[styles.imageContainer, animatedStyle]}>
@@ -150,84 +209,73 @@ export default function Home({ navigation }: any) {
 
   return (
     <View style={styles.container}>
+
+      {/* MY POSTS MODAL (ONLY ONCE) */}
+      {showMyPosts && (
+        <View style={styles.myPostsOverlay}>
+          <View style={styles.overlayHeader}>
+            <Text style={styles.overlayTitle}>My Posts</Text>
+
+            <TouchableOpacity onPress={() => setShowMyPosts(false)}>
+              <Text style={styles.closeBtn}>Close</Text>
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            data={myPosts}
+            keyExtractor={(i) => i.id}
+            renderItem={({ item }) => (
+              <View style={styles.myPostCard}>
+                <Image source={{ uri: item.image }} style={styles.myPostImage} />
+                <Text style={styles.myPostTitle}>{item.title}</Text>
+              </View>
+            )}
+          />
+        </View>
+      )}
+
       <FlatList
         data={filtered}
         keyExtractor={(i) => i.id}
-        showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
         ListHeaderComponent={() => (
           <>
+            {/* TOP BAR FIXED */}
             <View style={styles.topBar}>
               <TextInput
                 placeholder="Search recipes..."
-                placeholderTextColor="#7a9b8e"
                 value={search}
                 onChangeText={setSearch}
                 style={styles.search}
               />
+
+              {/* BETWEEN SEARCH AND LOGOUT */}
+              <TouchableOpacity onPress={openMyPosts} style={styles.myPostsBtn}>
+                <Text style={styles.myPostsText}>My Posts</Text>
+              </TouchableOpacity>
 
               <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
                 <Text style={styles.logoutText}>Logout</Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.categoriesWrapper}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {categories.map((item) => (
-                  <TouchableOpacity
-                    key={item}
-                    onPress={() => setSelectedCategory(item)}
-                    style={[
-                      styles.categoryBtn,
-                      selectedCategory === item && styles.categoryActive,
-                    ]}
-                  >
-                    <Text
-                      style={
-                        selectedCategory === item
-                          ? styles.categoryActiveText
-                          : styles.categoryText
-                      }
-                    >
-                      {item}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
+            <ScrollView horizontal>
+              {categories.map((item) => (
+                <TouchableOpacity
+                  key={item}
+                  onPress={() => setSelectedCategory(item)}
+                  style={styles.categoryBtn}
+                >
+                  <Text>{item}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </>
         )}
         renderItem={({ item }) => (
           <View style={styles.card}>
             <AnimatedRecipeImage uri={item.image} />
-
-            <View style={styles.cardContent}>
-              <Text style={styles.title}>{item.title}</Text>
-
-              <Text style={styles.category}>{item.category}</Text>
-
-              <Text numberOfLines={2} style={styles.ingredients}>
-                {item.ingredients}
-              </Text>
-
-              <View style={styles.actions}>
-                <TouchableOpacity
-                  onPress={() =>
-                    navigation.navigate("EditRecipe", {
-                      recipe: item,
-                    })
-                  }
-                  style={styles.editBtn}
-                >
-                  <Text style={styles.btnText}>Edit</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        )}
-        ListEmptyComponent={() => (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No recipes found</Text>
+            <Text style={styles.title}>{item.title}</Text>
           </View>
         )}
       />
@@ -284,6 +332,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
 
+
   categoryBtn: {
     backgroundColor: "#FFFFFF",
     paddingVertical: 10,
@@ -307,78 +356,140 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 28,
-    marginBottom: 20,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 10,
-    elevation: 4,
+  backgroundColor: "#FFFFFF",
+  borderRadius: 22,
+  marginBottom: 16,
+  overflow: "hidden",
+  shadowColor: "#000",
+  shadowOpacity: 0.06,
+  shadowOffset: { width: 0, height: 3 },
+  shadowRadius: 8,
+  elevation: 3,
+},
+
+imageContainer: {
+  width: "100%",
+  height: 170,
+  overflow: "hidden",
+},
+
+recipeImage: {
+  width: "100%",
+  height: 170,
+  borderTopLeftRadius: 22,
+  borderTopRightRadius: 22,
+},
+
+cardContent: {
+  padding: 14,
+},
+
+title: {
+  fontSize: 20,
+  fontWeight: "800",
+  color: "#4B3248",
+},
+
+category: { 
+  color: "#4F9980",
+  marginTop: 6,
+  fontWeight: "800", 
+},
+
+ingredients: {
+  color: "#6B7280",
+  marginTop: 8,
+  lineHeight: 20,
+  fontSize: 13,
+},
+
+emptyContainer: {
+  alignItems: "center", 
+  marginTop: 50,
   },
 
-  imageContainer: {
-    width: "100%",
-    height: 220,
-    overflow: "hidden",
-  },
+emptyText: { 
+  fontSize: 18, 
+  fontWeight: "700",
+  color: "#4F9980",
+},
 
-  recipeImage: {
-    width: "100%",
-    height: 220,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-  },
+steps: {
+  color: "#4B5563",
+  marginTop: 8,
+  lineHeight: 20,
+  fontSize: 13,
+},
 
-  cardContent: {
-    padding: 18,
-  },
+seeMoreText: {
+  color: "#FF7A00",
+  fontWeight: "700",
+  marginTop: 8,
+},
 
-  title: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#4B3248",
-  },
+sectionTitle: {
+  marginTop: 10,
+  fontSize: 15,
+  fontWeight: "800",
+  color: "#4F9980",
+},
 
-  category: {
-    color: "#4F9980",
-    marginTop: 6,
-    fontWeight: "700",
-  },
+myPostsBtn: {
+  backgroundColor: "#FF7A00",
+  padding: 12,
+  borderRadius: 14,
+  marginBottom: 10,
+},
 
-  ingredients: {
-    color: "#6B7280",
-    marginTop: 10,
-    lineHeight: 20,
-  },
+myPostsText: {
+  color: "#fff",
+  fontWeight: "800",
+},
 
-  actions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginTop: 16,
-  },
+myPostsOverlay: {
+  position: "absolute",
+  top: 0,
+  bottom: 0,
+  left: 0,
+  right: 0,
+  backgroundColor: "#FFF4E6",
+  zIndex: 999,
+  padding: 16,
+},
 
-  editBtn: {
-    backgroundColor: "#FF7A00",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-  },
+overlayHeader: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+},
 
-  btnText: {
-    color: "#FFFFFF",
-    fontWeight: "800",
-  },
+overlayTitle: {
+  fontSize: 20,
+  fontWeight: "800",
+},
 
-  emptyContainer: {
-    alignItems: "center",
-    marginTop: 50,
-  },
+closeBtn: {
+  color: "#FF7A00",
+  fontWeight: "800",
+},
 
-  emptyText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#4F9980",
-  },
+myPostCard: {
+  backgroundColor: "#fff",
+  marginBottom: 12,
+  borderRadius: 16,
+  overflow: "hidden",
+},
+
+myPostImage: {
+  width: "100%",
+  height: 150,
+},
+
+myPostTitle: {
+  fontSize: 16,
+  fontWeight: "800",
+},
+
+myPostCategory: {
+  color: "#4F9980",
+},
 });

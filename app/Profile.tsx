@@ -14,31 +14,44 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "../lib/supabase";
 
-/* =========================
-   PROFILE SCREEN
-========================= */
+
 export default function Profile({ navigation }: any) {
   const [loading, setLoading] = useState(true);
+
   const [user, setUser] = useState<any>(null);
 
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [avatar, setAvatar] = useState("");
+
   const [recipes, setRecipes] = useState<any[]>([]);
+
+  const [isEditing, setIsEditing] =
+    useState(false);
 
   useEffect(() => {
     loadUser();
-    fetchUserRecipes();
   }, []);
 
   const loadUser = async () => {
     try {
-      const raw = await AsyncStorage.getItem("user");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        setUser(parsed);
-        setUsername(parsed.username || "User");
-        setAvatar(parsed.avatar || "");
+      const raw =
+        await AsyncStorage.getItem("user");
+
+      if (!raw) {
+        setLoading(false);
+        return;
       }
+
+      const parsed = JSON.parse(raw);
+
+      setUser(parsed);
+
+      setUsername(parsed.username || "");
+      setEmail(parsed.email || "");
+      setAvatar(parsed.avatar || "");
+
+      fetchUserRecipes(parsed.id);
     } catch (e) {
       console.log(e);
     } finally {
@@ -46,36 +59,36 @@ export default function Profile({ navigation }: any) {
     }
   };
 
-  const fetchUserRecipes = async () => {
-    const raw = await AsyncStorage.getItem("user");
-    if (!raw) return;
+  const fetchUserRecipes = async (userId: string) => {
+  const { data, error } = await supabase
+    .from("recipes")
+    .select("*")
+    .eq("user_id", String(userId));
 
-    const parsed = JSON.parse(raw);
+  if (error) {
+    console.log("FETCH ERROR:", error.message);
+    return;
+  }
 
-    const { data, error } = await supabase
-      .from("recipes")
-      .select("*")
-      .eq("user_id", parsed.id);
-
-    if (!error) {
-      setRecipes(data || []);
-    }
-  };
+  setRecipes(data || []);
+};
 
   const pickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
       Alert.alert("Permission denied");
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
-      allowsEditing: true,
-      aspect: [1, 1],
-    });
+    const result =
+      await ImagePicker.launchImageLibraryAsync({
+        mediaTypes:
+          ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 1,
+      });
 
     if (!result.canceled) {
       setAvatar(result.assets[0].uri);
@@ -87,22 +100,80 @@ export default function Profile({ navigation }: any) {
       const updatedUser = {
         ...user,
         username,
+        email,
         avatar,
       };
 
-      await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+      await AsyncStorage.setItem(
+        "user",
+        JSON.stringify(updatedUser)
+      );
+
       setUser(updatedUser);
 
-      Alert.alert("Success", "Profile updated!");
+      Alert.alert(
+        "Success",
+        "Profile updated!"
+      );
     } catch (e) {
       console.log(e);
     }
   };
 
+  const deleteRecipe = (
+    recipeId: string
+  ) => {
+    Alert.alert(
+      "Delete Recipe",
+      "Are you sure you want to delete this recipe?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            const { error } =
+              await supabase
+                .from("recipes")
+                .delete()
+                .eq("id", recipeId);
+
+            if (error) {
+              Alert.alert(
+                "Error",
+                error.message
+              );
+              return;
+            }
+
+            setRecipes((prev) =>
+              prev.filter(
+                (item) =>
+                  String(item.id) !==
+                  String(recipeId)
+              )
+            );
+
+            Alert.alert(
+              "Deleted",
+              "Recipe deleted successfully"
+            );
+          },
+        },
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#FF7A00" />
+        <ActivityIndicator
+          size="large"
+          color="#FF7A00"
+        />
       </View>
     );
   }
@@ -111,51 +182,181 @@ export default function Profile({ navigation }: any) {
     <FlatList
       style={styles.container}
       data={recipes}
-      keyExtractor={(item) => String(item.id)}
+      keyExtractor={(item) =>
+        String(item.id)
+      }
       ListHeaderComponent={
         <>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
-
           <View style={styles.header}>
-            {avatar ? (
-              <Image source={{ uri: avatar }} style={styles.avatarImage} />
-            ) : (
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {String(username).charAt(0).toUpperCase()}
-                </Text>
-              </View>
-            )}
+            <TouchableOpacity
+              disabled={!isEditing}
+              onPress={pickImage}
+            >
+              {avatar ? (
+                <Image
+                  source={{ uri: avatar }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <View style={styles.avatar}>
+                  <Text
+                    style={styles.avatarText}
+                  >
+                    {username
+                      ?.charAt(0)
+                      ?.toUpperCase()}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
 
-            <Text style={styles.name}>{username}</Text>
-            <Text style={styles.subtitle}>{username}@recipeapp.com</Text>
+            <Text style={styles.name}>
+              {username}
+            </Text>
+
+            <Text style={styles.subtitle}>
+              {email}
+            </Text>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.title}>Edit Profile</Text>
+            <Text style={styles.title}>
+              Profile Information
+            </Text>
 
-            <Text style={styles.label}>Username</Text>
-            <TextInput value={username} onChangeText={setUsername} style={styles.input} />
+            <Text style={styles.label}>
+              Username
+            </Text>
 
-            <TouchableOpacity style={styles.button} onPress={saveProfile}>
-              <Text style={styles.buttonText}>Save Profile</Text>
-            </TouchableOpacity>
+            <TextInput
+              value={username}
+              editable={isEditing}
+              onChangeText={setUsername}
+              style={styles.input}
+            />
+
+            <Text style={styles.label}>
+              Email
+            </Text>
+
+            <TextInput
+              value={email}
+              editable={isEditing}
+              onChangeText={setEmail}
+              style={styles.input}
+            />
+
+            {!isEditing ? (
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() =>
+                  setIsEditing(true)
+                }
+              >
+                <Text
+                  style={styles.buttonText}
+                >
+                  Edit Profile
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() => {
+                  saveProfile();
+                  setIsEditing(false);
+                }}
+              >
+                <Text
+                  style={styles.buttonText}
+                >
+                  Save Profile
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
-          <Text style={styles.postTitle}>Your Past Recipes</Text>
+          <Text style={styles.postTitle}>
+            Your Recipes
+          </Text>
         </>
       }
       renderItem={({ item }) => (
         <View style={styles.recipeCard}>
-          <Image source={{ uri: item.image }} style={styles.recipeImage} />
-          <View style={{ padding: 12 }}>
-            <Text style={styles.recipeName}>{item.title}</Text>
-            <Text style={styles.recipeCategory}>{item.category}</Text>
+          <Image
+            source={{ uri: item.image }}
+            style={styles.recipeImage}
+          />
+
+          <View style={styles.recipeContent}>
+            <Text style={styles.recipeName}>
+              {item.title}
+            </Text>
+
+            <Text
+              style={styles.recipeCategory}
+            >
+              {item.category}
+            </Text>
+
+            <Text
+              style={styles.sectionTitle}
+            >
+              Ingredients
+            </Text>
+
+            <Text
+              style={
+                styles.recipeIngredients
+              }
+            >
+              {item.ingredients}
+            </Text>
+
+            <Text
+              style={styles.sectionTitle}
+            >
+              Steps
+            </Text>
+
+            <Text style={styles.recipeSteps}>
+              {item.steps}
+            </Text>
+
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={styles.editBtn}
+                onPress={() =>
+                  navigation.navigate(
+                    "EditRecipe",
+                    {
+                      recipe: item,
+                    }
+                  )
+                }
+              >
+                <Text
+                  style={styles.actionText}
+                >
+                  Edit
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.deleteBtn}
+                onPress={() =>
+                  deleteRecipe(
+                    String(item.id)
+                  )
+                }
+              >
+                <Text
+                  style={styles.actionText}
+                >
+                  Delete
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       )}
@@ -176,117 +377,96 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  backButton: {
-    position: "absolute",
-    top: 50,
-    left: 16,
-    zIndex: 999,
-    backgroundColor: "#FFF",
-    width: 55,
-    height: 55,
-    borderRadius: 28,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  backButtonText: {
-    fontSize: 24,
-    fontWeight: "900",
-    color: "#4B3248",
-  },
-
   header: {
-    paddingTop: 90,
     alignItems: "center",
-    paddingBottom: 18,
+    marginBottom: 20,
+    marginTop: 40,
   },
 
   avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: "#72b99e",
     justifyContent: "center",
     alignItems: "center",
   },
 
   avatarImage: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    marginBottom: 10,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
 
   avatarText: {
-    color: "#fff",
-    fontSize: 34,
+    color: "#FFFFFF",
+    fontSize: 36,
     fontWeight: "800",
   },
 
   name: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "800",
     color: "#4B3248",
+    marginTop: 10,
   },
 
   subtitle: {
     color: "#6B7280",
-    marginTop: 6,
+    marginTop: 4,
   },
 
   card: {
     backgroundColor: "#FFFFFF",
     padding: 20,
-    borderRadius: 24,
-    marginTop: 10,
+    borderRadius: 22,
+    marginBottom: 20,
   },
 
   title: {
     fontSize: 22,
     fontWeight: "800",
-    textAlign: "center",
-    marginBottom: 16,
+    marginBottom: 18,
+    color: "#4B3248",
   },
 
   label: {
-    fontWeight: "800",
     color: "#4F9980",
+    fontWeight: "700",
     marginBottom: 8,
   },
 
   input: {
-    backgroundColor: "#f7f7f7",
-    borderRadius: 12,
+    backgroundColor: "#F7F7F7",
+    borderRadius: 14,
     padding: 14,
-    marginBottom: 14,
+    marginBottom: 16,
   },
 
   button: {
     backgroundColor: "#FF7A00",
-    padding: 15,
+    padding: 16,
     borderRadius: 18,
     alignItems: "center",
   },
 
   buttonText: {
-    color: "#FFF",
+    color: "#FFFFFF",
     fontWeight: "800",
   },
 
   postTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "800",
     color: "#4F9980",
-    marginTop: 24,
-    marginBottom: 10,
+    marginBottom: 16,
   },
 
   recipeCard: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
     overflow: "hidden",
-    marginBottom: 16,
-    elevation: 3,
+    marginBottom: 20,
   },
 
   recipeImage: {
@@ -294,15 +474,63 @@ const styles = StyleSheet.create({
     height: 180,
   },
 
+  recipeContent: {
+    padding: 16,
+  },
+
   recipeName: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "800",
     color: "#4B3248",
   },
 
   recipeCategory: {
+    color: "#4F9980",
     marginTop: 4,
-    color: "#5a9d80",
     fontWeight: "700",
+  },
+
+  sectionTitle: {
+    marginTop: 12,
+    color: "#FF7A00",
+    fontWeight: "800",
+  },
+
+  recipeIngredients: {
+    marginTop: 6,
+    color: "#6B7280",
+    lineHeight: 20,
+  },
+
+  recipeSteps: {
+    marginTop: 6,
+    color: "#4B5563",
+    lineHeight: 20,
+  },
+
+  actions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 16,
+  },
+
+  editBtn: {
+    backgroundColor: "#FF7A00",
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 16,
+    marginRight: 10,
+  },
+
+  deleteBtn: {
+    backgroundColor: "#E53935",
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 16,
+  },
+
+  actionText: {
+    color: "#FFFFFF",
+    fontWeight: "800",
   },
 });
