@@ -23,8 +23,7 @@ export default function AddRecipe({ navigation }: any) {
   const categories = ["Breakfast", "Lunch", "Dinner", "Dessert"];
 
   const pickImage = async () => {
-    const permission =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
       Alert.alert("Permission required", "Allow access to photos");
@@ -44,7 +43,6 @@ export default function AddRecipe({ navigation }: any) {
   const uploadImage = async (uri: string) => {
     try {
       const fileName = `${Date.now()}.jpg`;
-
       const response = await fetch(uri);
       if (!response.ok) return null;
 
@@ -59,9 +57,7 @@ export default function AddRecipe({ navigation }: any) {
 
       if (error) return null;
 
-      const { data } = supabase.storage
-        .from("recipe-images")
-        .getPublicUrl(fileName);
+      const { data } = supabase.storage.from("recipe-images").getPublicUrl(fileName);
 
       return data.publicUrl;
     } catch (e) {
@@ -69,64 +65,33 @@ export default function AddRecipe({ navigation }: any) {
     }
   };
 
-<<<<<<< HEAD
   const addRecipe = async () => {
-    if (!title || !ingredients || !steps || !category || !image) {
+    if (loading) return;
+
+    if (
+      !title.trim() ||
+      !ingredients.trim() ||
+      !steps.trim() ||
+      !category.trim() ||
+      !image
+    ) {
       Alert.alert("Missing Fields", "Please complete all fields");
-=======
-  // 💾 SAVE RECIPE
-const addRecipe = async () => {
-  // Prevent multiple taps
-  if (loading) return;
-
-  // Validate fields
-  if (
-    !title.trim() ||
-    !ingredients.trim() ||
-    !steps.trim() ||
-    !category.trim() ||
-    !image
-  ) {
-    Alert.alert("Missing Fields", "Please complete all fields");
-    return;
-  }
-
-  try {
-    setLoading(true);
-
-    // Upload image first
-    const imageUrl = await uploadImage(image);
-
-    if (!imageUrl) {
-      Alert.alert("Upload Failed", "Could not upload image");
-      setLoading(false);
->>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
       return;
     }
 
-    // Save recipe to Supabase
-    const { error } = await supabase.from("recipes").insert([
-      {
-        title: title.trim(),
-        ingredients: ingredients.trim(),
-        steps: steps.trim(),
-        category,
-        image: imageUrl,
-      },
-    ]);
-
-<<<<<<< HEAD
+    setLoading(true);
+    try {
       const imageUrl = await uploadImage(image);
       if (!imageUrl) {
-        Alert.alert("Error", "Image upload failed");
+        Alert.alert("Upload Failed", "Could not upload image");
         return;
       }
 
       const { error } = await supabase.from("recipes").insert([
         {
-          title,
-          ingredients,
-          steps,
+          title: title.trim(),
+          ingredients: ingredients.trim(),
+          steps: steps.trim(),
           category,
           image: imageUrl,
         },
@@ -137,37 +102,14 @@ const addRecipe = async () => {
         return;
       }
 
-      Alert.alert("Success", "Recipe added!");
-      navigation.goBack();
+      Alert.alert("Success", "Recipe saved successfully!");
+      navigation.navigate("Home");
+    } catch (err: any) {
+      Alert.alert("Error", err?.message || "Something went wrong");
     } finally {
-=======
-    if (error) {
-      console.log("SAVE ERROR:", error.message);
-      Alert.alert("Error", error.message);
->>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
       setLoading(false);
-      return;
     }
-
-    // Clear form
-    setTitle("");
-    setIngredients("");
-    setSteps("");
-    setCategory("");
-    setImage(null);
-
-    Alert.alert("Success", "Recipe saved successfully!");
-
-    // Go back to Home
-    navigation.navigate("Home");
-
-  } catch (err: any) {
-    console.log("ADD RECIPE ERROR:", err);
-    Alert.alert("Error", err.message || "Something went wrong");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -224,9 +166,7 @@ const addRecipe = async () => {
       </View>
 
       <TouchableOpacity style={styles.imageBtn} onPress={pickImage}>
-        <Text style={{ color: "#fff", fontWeight: "700" }}>
-          Pick Image
-        </Text>
+        <Text style={{ color: "#fff", fontWeight: "700" }}>Pick Image</Text>
       </TouchableOpacity>
 
       {image && <Image source={{ uri: image }} style={styles.preview} />}
@@ -244,9 +184,6 @@ const addRecipe = async () => {
   );
 }
 
-/* =========================
-   THEME DESIGN
-========================= */
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -9,13 +9,15 @@ import {
   TextInput,
   ActivityIndicator,
   ScrollView,
-  Alert,
 } from "react-native";
 
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withRepeat,
+  withSequence,
+  withSpring,
 } from "react-native-reanimated";
 
 import { supabase } from "../lib/supabase";
@@ -31,92 +33,22 @@ type Recipe = {
   steps?: string;
 };
 
-type Props = {
-  navigation: any;
-};
-
-/* =========================
-   ✨ PREMIUM ANIMATED IMAGE
-========================= */
-const AnimatedRecipeImage = ({ uri }: { uri: string }) => {
-  const opacity = useSharedValue(0);
-  const scale = useSharedValue(0.85);
-  const translateY = useSharedValue(12);
-
-  React.useEffect(() => {
-    // entrance animation
-    opacity.value = withTiming(1, { duration: 500 });
-    scale.value = withTiming(1, { duration: 650 });
-    translateY.value = withTiming(0, { duration: 650 });
-  }, []);
-
-  // floating loop animation
-  React.useEffect(() => {
-    const loop = () => {
-      translateY.value = withTiming(-5, { duration: 1600 }, () => {
-        translateY.value = withTiming(0, { duration: 1600 }, loop);
-      });
-    };
-
-    loop();
-  }, []);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: opacity.value,
-      transform: [
-        { scale: scale.value },
-        { translateY: translateY.value },
-      ],
-    };
-  });
-
-  return (
-    <Animated.View style={[{ width: "100%", height: 220 }, animatedStyle]}>
-      <Image
-        source={{ uri }}
-        style={{
-          width: "100%",
-          height: 220,
-        }}
-      />
-    </Animated.View>
-  );
-};
-
-/* =========================
-   HOME SCREEN
-========================= */
-export default function Home({ navigation }: Props) {
+export default function Home({ navigation }: any) {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [filtered, setFiltered] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] =
-    useState("All");
+  const [selectedCategory, setSelectedCategory] = useState("All");
 
-<<<<<<< HEAD
-  const categories = [
-    "All",
-    "Breakfast",
-    "Lunch",
-    "Dinner",
-    "Dessert",
-  ];
-=======
-  const categories = ["All", "Breakfast", "Lunch", "Dinner", "Dessert"];
->>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
+  const categories = useMemo(
+    () => ["All", "Breakfast", "Lunch", "Dinner", "Dessert"],
+    []
+  );
 
-  // =========================
-  // FETCH RECIPES
-  // =========================
-  const fetchRecipes = async (showLoader = false) => {
+  const fetchRecipes = useCallback(async (showLoader = false) => {
     if (showLoader) setLoading(true);
 
-    const { data, error } = await supabase
-      .from("recipes")
-      .select("*");
+    const { data, error } = await supabase.from("recipes").select("*");
 
     if (error) {
       console.log("FETCH ERROR:", error.message);
@@ -132,125 +64,80 @@ export default function Home({ navigation }: Props) {
     setRecipes(normalized);
     setFiltered(normalized);
     setLoading(false);
-  };
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       fetchRecipes(true);
-    }, [])
+    }, [fetchRecipes])
   );
 
-  // =========================
-  // DELETE FUNCTION
-  // =========================
- 
-  // =========================
-  // FILTER
-  // =========================
   useEffect(() => {
-<<<<<<< HEAD
-    const channel = supabase
-      .channel("recipes-realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "recipes" },
-        (payload) => {
-          if (payload.eventType === "INSERT") {
-            setRecipes((prev) => [
-              {
-                ...(payload as any).new,
-                id: String((payload as any).new.id),
-              },
-              ...prev,
-            ]);
-          }
-
-          if (payload.eventType === "DELETE") {
-            setRecipes((prev) =>
-              prev.filter(
-                (item) =>
-                  item.id !== String((payload as any).old.id)
-              )
-            );
-          }
-
-          if (payload.eventType === "UPDATE") {
-            setRecipes((prev) =>
-              prev.map((item) =>
-                item.id === String((payload as any).new.id)
-                  ? {
-                      ...(payload as any).new,
-                      id: String((payload as any).new.id),
-                    }
-                  : item
-              )
-            );
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  useEffect(() => {
-    let filteredRecipes = recipes;
+    let next = recipes;
 
     if (selectedCategory !== "All") {
-      filteredRecipes = filteredRecipes.filter(
+      next = next.filter(
+        (r) => r.category?.toLowerCase() === selectedCategory.toLowerCase()
+      );
+    }
+
+    const text = search.trim().toLowerCase();
+
+    if (text) {
+      next = next.filter(
         (r) =>
-          r.category?.toLowerCase() ===
-          selectedCategory.toLowerCase()
+          r.title?.toLowerCase().includes(text) ||
+          r.ingredients?.toLowerCase().includes(text) ||
+          r.category?.toLowerCase().includes(text) ||
+          r.steps?.toLowerCase().includes(text)
       );
     }
 
-    if (search.trim() !== "") {
-      const searchText = search.toLowerCase();
+    setFiltered(next);
+  }, [recipes, search, selectedCategory]);
 
-      filteredRecipes = filteredRecipes.filter(
-        (r) =>
-          r.title?.toLowerCase().includes(searchText) ||
-          r.ingredients?.toLowerCase().includes(searchText) ||
-          r.category?.toLowerCase().includes(searchText) ||
-          r.steps?.toLowerCase().includes(searchText)
-      );
-    }
-
-=======
-    let filteredRecipes = recipes;
-
-    if (selectedCategory !== "All") {
-      filteredRecipes = filteredRecipes.filter(
-        (recipe) =>
-          recipe.category?.toLowerCase() ===
-          selectedCategory.toLowerCase()
-      );
-    }
-
-    if (search.trim() !== "") {
-      const text = search.toLowerCase();
-
-      filteredRecipes = filteredRecipes.filter(
-        (recipe) =>
-          recipe.title?.toLowerCase().includes(text) ||
-          recipe.ingredients?.toLowerCase().includes(text) ||
-          recipe.category?.toLowerCase().includes(text) ||
-          recipe.steps?.toLowerCase().includes(text)
-      );
-    }
-
->>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
-    setFiltered(filteredRecipes);
-  }, [search, selectedCategory, recipes]);
-
-  // =========================
-  // LOGOUT
-  // =========================
   const logout = async () => {
     await AsyncStorage.removeItem("user");
     navigation.replace("Login");
+  };
+
+  // ANIMATED IMAGE COMPONENT
+  const AnimatedRecipeImage = ({ uri }: { uri: string }) => {
+    const translateX = useSharedValue(-120);
+    const scale = useSharedValue(0.8);
+
+    useEffect(() => {
+      // swipe animation
+      translateX.value = withSpring(0, {
+        damping: 8,
+        stiffness: 90,
+      });
+
+      // bounce animation
+      scale.value = withRepeat(
+        withSequence(
+          withTiming(1.05, { duration: 800 }),
+          withTiming(1, { duration: 800 })
+        ),
+        -1,
+        true
+      );
+    }, []);
+
+    const animatedStyle = useAnimatedStyle(() => {
+      return {
+        transform: [
+          { translateX: translateX.value },
+          { scale: scale.value },
+        ],
+      };
+    });
+
+    return (
+      <Animated.View style={[styles.imageContainer, animatedStyle]}>
+        <Image source={{ uri }} style={styles.recipeImage} />
+      </Animated.View>
+    );
   };
 
   if (loading) {
@@ -267,45 +154,23 @@ export default function Home({ navigation }: Props) {
         data={filtered}
         keyExtractor={(i) => i.id}
         showsVerticalScrollIndicator={false}
-<<<<<<< HEAD
         contentContainerStyle={{ paddingBottom: 100 }}
-=======
->>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
         ListHeaderComponent={() => (
           <>
-            {/* TOP BAR */}
             <View style={styles.topBar}>
               <TextInput
                 placeholder="Search recipes..."
-<<<<<<< HEAD
-                placeholderTextColor="#6B7280"
-=======
                 placeholderTextColor="#7a9b8e"
->>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
                 value={search}
                 onChangeText={setSearch}
                 style={styles.search}
               />
 
-              <TouchableOpacity
-                onPress={logout}
-                style={styles.logoutBtn}
-              >
-<<<<<<< HEAD
-                <Text style={styles.logoutText}>
-                  Logout
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* CATEGORIES */}
-=======
+              <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
                 <Text style={styles.logoutText}>Logout</Text>
               </TouchableOpacity>
             </View>
 
-            {/* CATEGORY */}
->>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
             <View style={styles.categoriesWrapper}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {categories.map((item) => (
@@ -314,8 +179,7 @@ export default function Home({ navigation }: Props) {
                     onPress={() => setSelectedCategory(item)}
                     style={[
                       styles.categoryBtn,
-                      selectedCategory === item &&
-                        styles.categoryActive,
+                      selectedCategory === item && styles.categoryActive,
                     ]}
                   >
                     <Text
@@ -335,21 +199,14 @@ export default function Home({ navigation }: Props) {
         )}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            {/* ✨ ANIMATED IMAGE */}
             <AnimatedRecipeImage uri={item.image} />
 
             <View style={styles.cardContent}>
               <Text style={styles.title}>{item.title}</Text>
-<<<<<<< HEAD
 
-              <Text style={styles.category}>
-                {item.category}
-              </Text>
+              <Text style={styles.category}>{item.category}</Text>
 
-              <Text
-                numberOfLines={2}
-                style={styles.ingredients}
-              >
+              <Text numberOfLines={2} style={styles.ingredients}>
                 {item.ingredients}
               </Text>
 
@@ -364,30 +221,13 @@ export default function Home({ navigation }: Props) {
                 >
                   <Text style={styles.btnText}>Edit</Text>
                 </TouchableOpacity>
-=======
-              <Text style={styles.category}>{item.category}</Text>
-
-              <Text numberOfLines={2} style={styles.ingredients}>
-                {item.ingredients}
-              </Text>
-
-              {/* VIEW ONLY MODE */}
-              <View style={{ marginTop: 10 }}>
-                <Text style={styles.category}>{item.category}</Text>
-
-                <Text numberOfLines={2} style={styles.ingredients}>
-                  {item.ingredients}
-                </Text>
->>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
               </View>
             </View>
           </View>
         )}
         ListEmptyComponent={() => (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              No recipes found
-            </Text>
+            <Text style={styles.emptyText}>No recipes found</Text>
           </View>
         )}
       />
@@ -395,9 +235,6 @@ export default function Home({ navigation }: Props) {
   );
 }
 
-/* =========================
-   STYLES (UNCHANGED)
-========================= */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -431,13 +268,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 50,
   },
-/* LABELS */
-  label: {
-    color: "#4B3248",
-    fontWeight: "700",
-    marginBottom: 8,
-    marginLeft: 4,
-  },
+
   logoutBtn: {
     backgroundColor: "#FF7A00",
     padding: 12,
@@ -455,7 +286,8 @@ const styles = StyleSheet.create({
 
   categoryBtn: {
     backgroundColor: "#FFFFFF",
-    padding: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
     borderRadius: 20,
     marginRight: 10,
   },
@@ -479,6 +311,24 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     marginBottom: 20,
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
+    elevation: 4,
+  },
+
+  imageContainer: {
+    width: "100%",
+    height: 220,
+    overflow: "hidden",
+  },
+
+  recipeImage: {
+    width: "100%",
+    height: 220,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
   },
 
   cardContent: {
@@ -500,18 +350,19 @@ const styles = StyleSheet.create({
   ingredients: {
     color: "#6B7280",
     marginTop: 10,
+    lineHeight: 20,
   },
 
   actions: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    marginTop: 12,
+    marginTop: 16,
   },
 
-<<<<<<< HEAD
   editBtn: {
     backgroundColor: "#FF7A00",
-    padding: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 16,
   },
 
@@ -523,14 +374,6 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: "center",
     marginTop: 50,
-=======
-  logoutBtn: {
-    backgroundColor: "#4b8f7e",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 18,
-    alignSelf: "flex-end",
->>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
   },
 
   emptyText: {
@@ -538,8 +381,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#4F9980",
   },
-<<<<<<< HEAD
-=======
-
->>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
 });
