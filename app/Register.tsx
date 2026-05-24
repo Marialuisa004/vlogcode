@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ImageBackground,
   View,
@@ -8,7 +8,9 @@ import {
   StyleSheet,
   Alert,
   Image,
+  Animated,
 } from "react-native";
+
 
 import { supabase } from "../lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -19,6 +21,43 @@ const logoImage = require("../assets/logo.png");
 export default function Register({ navigation }: any) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+
+  const logoAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const bounce = () => {
+      logoAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(logoAnim, {
+          toValue: 1,
+          duration: 650,
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoAnim, {
+          toValue: 0,
+          duration: 520,
+          useNativeDriver: true,
+        }),
+
+      ]).start(() => bounce());
+    };
+
+    bounce();
+    return () => {
+      logoAnim.stopAnimation();
+    };
+  }, [logoAnim]);
+
+  const logoScale = logoAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.96, 1.08],
+  });
+
+  const logoTranslateY = logoAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [6, 0],
+  });
+
 
   const register = async () => {
     if (!username || !password) {
@@ -56,8 +95,16 @@ export default function Register({ navigation }: any) {
       <View style={styles.inner}>
         {/* LOGO */}
         <View style={styles.logoCircle}>
-          <Image source={logoImage} style={styles.logo} />
+          <Animated.View
+            style={{
+              opacity: logoAnim,
+              transform: [{ scale: logoScale }, { translateY: logoTranslateY }],
+            }}
+          >
+            <Image source={logoImage} style={styles.logo} />
+          </Animated.View>
         </View>
+
 
         {/* TITLE */}
         <Text style={styles.title}>Create Account</Text>
@@ -124,11 +171,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF4E6",
   },
 
+
   /* DARK OVERLAY */
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.18)",
+    backgroundColor: "rgba(0,0,0,0.28)",
   },
+
 
   /* MAIN CARD */
   inner: {
@@ -149,8 +198,10 @@ const styles = StyleSheet.create({
 
   /* BACKGROUND IMAGE */
   backgroundImage: {
-    opacity: 1,
+    width: "100%",
+    height: "100%",
   },
+
 
   /* LOGO CIRCLE */
   logoCircle: {

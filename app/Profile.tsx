@@ -218,18 +218,7 @@ export default function Profile({ navigation }: any) {
     }
   };
 
-  const logout = async () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        onPress: async () => {
-          await AsyncStorage.removeItem("user");
-          navigation.replace("Login");
-        },
-      },
-    ]);
-  };
+
 
   if (loading) {
     return (
@@ -291,14 +280,7 @@ export default function Profile({ navigation }: any) {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.logoutButton}
-              onPress={logout}
-            >
-              <Text style={styles.logoutText}>
-                Logout
-              </Text>
-            </TouchableOpacity>
+
           </View>
 
           <Text style={styles.postTitle}>

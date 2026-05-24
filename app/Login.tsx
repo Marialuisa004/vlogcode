@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ImageBackground,
   View,
@@ -7,10 +7,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Animated,
 } from "react-native";
-
 import { Image } from "react-native";
-
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../lib/supabase";
 
@@ -64,6 +63,44 @@ export default function Login({ navigation }: any) {
     navigation.replace("Main");
   };
 
+  const logoAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const bounce = () => {
+      logoAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(logoAnim, {
+          toValue: 1,
+          duration: 650,
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoAnim, {
+          toValue: 0,
+          duration: 520,
+          useNativeDriver: true,
+        }),
+
+      ]).start(() => bounce());
+    };
+
+    bounce();
+    return () => {
+      logoAnim.stopAnimation();
+    };
+  }, [logoAnim]);
+
+
+  const logoScale = logoAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.96, 1.08],
+  });
+
+  const logoTranslateY = logoAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [6, 0],
+  });
+
+
   return (
     <ImageBackground
       source={bgImage}
@@ -74,13 +111,32 @@ export default function Login({ navigation }: any) {
       <View style={styles.overlay} />
       <View style={styles.inner}>
         <View style={styles.cardTop} />
-        <Image
-          source={logoImage}
-          style={styles.logo}
-        />
-        <Text style={styles.title}>TasteList</Text>
-
-
+        <Animated.View
+          style={[
+            styles.logoWrapper,
+            {
+              opacity: logoAnim,
+              transform: [{ scale: logoScale }, { translateY: logoTranslateY }],
+            },
+          ]}
+        >
+          <Image source={logoImage} style={styles.logo} />
+        </Animated.View>
+        <Animated.Text
+          style={[
+            styles.title,
+            {
+              opacity: logoAnim.interpolate({ inputRange: [0, 1], outputRange: [0.65, 1] }),
+              transform: [
+                {
+                  translateY: logoAnim.interpolate({ inputRange: [0, 1], outputRange: [6, 0] }),
+                },
+              ],
+            },
+          ]}
+        >
+          TasteList
+        </Animated.Text>
         <TextInput
           placeholder="Username"
           value={username}
@@ -122,10 +178,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     padding: 20,
-    width: "100%",
-    height: "100%",
     backgroundColor: "#FFF4E6",
   },
+
 
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -153,20 +208,24 @@ const styles = StyleSheet.create({
   },
 
   backgroundImage: {
-    resizeMode: "cover",
     width: "100%",
     height: "100%",
+  },
+
+
+  logoWrapper: {
+    alignSelf: "center",
+    marginBottom: 12,
   },
 
   logo: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    alignSelf: "center",
-    marginBottom: 12,
   },
 
   title: {
+
     fontSize: 32,
     fontWeight: "bold",
     textAlign: "center",
@@ -183,6 +242,7 @@ const styles = StyleSheet.create({
     borderColor: "#FFD6B0",
   },
 
+
   placeholder: {
     color: "#9CA3AF",
   },
@@ -196,7 +256,7 @@ const styles = StyleSheet.create({
   },
 
   buttonText: {
-    color: "#fff",
+    color: "#3c3b3b",
     fontWeight: "bold",
   },
 

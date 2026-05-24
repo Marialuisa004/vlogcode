@@ -357,7 +357,13 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 50,
   },
-
+/* LABELS */
+  label: {
+    color: "#4B3248",
+    fontWeight: "700",
+    marginBottom: 8,
+    marginLeft: 4,
+  },
   logoutBtn: {
     backgroundColor: "#FF7A00",
     padding: 12,
