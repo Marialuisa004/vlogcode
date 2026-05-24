@@ -9,6 +9,7 @@ import {
   TextInput,
   ActivityIndicator,
   ScrollView,
+  Alert,
 } from "react-native";
 
 import Animated, {
@@ -95,6 +96,7 @@ export default function Home({ navigation }: Props) {
   const [selectedCategory, setSelectedCategory] =
     useState("All");
 
+<<<<<<< HEAD
   const categories = [
     "All",
     "Breakfast",
@@ -102,7 +104,13 @@ export default function Home({ navigation }: Props) {
     "Dinner",
     "Dessert",
   ];
+=======
+  const categories = ["All", "Breakfast", "Lunch", "Dinner", "Dessert"];
+>>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
 
+  // =========================
+  // FETCH RECIPES
+  // =========================
   const fetchRecipes = async (showLoader = false) => {
     if (showLoader) setLoading(true);
 
@@ -132,7 +140,15 @@ export default function Home({ navigation }: Props) {
     }, [])
   );
 
+  // =========================
+  // DELETE FUNCTION
+  // =========================
+ 
+  // =========================
+  // FILTER
+  // =========================
   useEffect(() => {
+<<<<<<< HEAD
     const channel = supabase
       .channel("recipes-realtime")
       .on(
@@ -202,9 +218,36 @@ export default function Home({ navigation }: Props) {
       );
     }
 
+=======
+    let filteredRecipes = recipes;
+
+    if (selectedCategory !== "All") {
+      filteredRecipes = filteredRecipes.filter(
+        (recipe) =>
+          recipe.category?.toLowerCase() ===
+          selectedCategory.toLowerCase()
+      );
+    }
+
+    if (search.trim() !== "") {
+      const text = search.toLowerCase();
+
+      filteredRecipes = filteredRecipes.filter(
+        (recipe) =>
+          recipe.title?.toLowerCase().includes(text) ||
+          recipe.ingredients?.toLowerCase().includes(text) ||
+          recipe.category?.toLowerCase().includes(text) ||
+          recipe.steps?.toLowerCase().includes(text)
+      );
+    }
+
+>>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
     setFiltered(filteredRecipes);
   }, [search, selectedCategory, recipes]);
 
+  // =========================
+  // LOGOUT
+  // =========================
   const logout = async () => {
     await AsyncStorage.removeItem("user");
     navigation.replace("Login");
@@ -224,14 +267,21 @@ export default function Home({ navigation }: Props) {
         data={filtered}
         keyExtractor={(i) => i.id}
         showsVerticalScrollIndicator={false}
+<<<<<<< HEAD
         contentContainerStyle={{ paddingBottom: 100 }}
+=======
+>>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
         ListHeaderComponent={() => (
           <>
             {/* TOP BAR */}
             <View style={styles.topBar}>
               <TextInput
                 placeholder="Search recipes..."
+<<<<<<< HEAD
                 placeholderTextColor="#6B7280"
+=======
+                placeholderTextColor="#7a9b8e"
+>>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
                 value={search}
                 onChangeText={setSearch}
                 style={styles.search}
@@ -241,6 +291,7 @@ export default function Home({ navigation }: Props) {
                 onPress={logout}
                 style={styles.logoutBtn}
               >
+<<<<<<< HEAD
                 <Text style={styles.logoutText}>
                   Logout
                 </Text>
@@ -248,6 +299,13 @@ export default function Home({ navigation }: Props) {
             </View>
 
             {/* CATEGORIES */}
+=======
+                <Text style={styles.logoutText}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* CATEGORY */}
+>>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
             <View style={styles.categoriesWrapper}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {categories.map((item) => (
@@ -282,6 +340,7 @@ export default function Home({ navigation }: Props) {
 
             <View style={styles.cardContent}>
               <Text style={styles.title}>{item.title}</Text>
+<<<<<<< HEAD
 
               <Text style={styles.category}>
                 {item.category}
@@ -305,6 +364,21 @@ export default function Home({ navigation }: Props) {
                 >
                   <Text style={styles.btnText}>Edit</Text>
                 </TouchableOpacity>
+=======
+              <Text style={styles.category}>{item.category}</Text>
+
+              <Text numberOfLines={2} style={styles.ingredients}>
+                {item.ingredients}
+              </Text>
+
+              {/* VIEW ONLY MODE */}
+              <View style={{ marginTop: 10 }}>
+                <Text style={styles.category}>{item.category}</Text>
+
+                <Text numberOfLines={2} style={styles.ingredients}>
+                  {item.ingredients}
+                </Text>
+>>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
               </View>
             </View>
           </View>
@@ -434,6 +508,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
 
+<<<<<<< HEAD
   editBtn: {
     backgroundColor: "#FF7A00",
     padding: 10,
@@ -448,6 +523,14 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: "center",
     marginTop: 50,
+=======
+  logoutBtn: {
+    backgroundColor: "#4b8f7e",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    alignSelf: "flex-end",
+>>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
   },
 
   emptyText: {
@@ -455,4 +538,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#4F9980",
   },
+<<<<<<< HEAD
+=======
+
+>>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
 });

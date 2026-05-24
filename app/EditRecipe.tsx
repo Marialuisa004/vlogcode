@@ -22,13 +22,18 @@ export default function EditRecipe({ route, navigation }: any) {
 
   const updateRecipe = async () => {
     if (!title || !ingredients || !steps || !category) {
-      Alert.alert("Missing Fields", "Please fill all fields");
+      Alert.alert("Missing Fields");
       return;
     }
 
     const { error } = await supabase
       .from("recipes")
-      .update({ title, ingredients, steps, category })
+      .update({
+        title,
+        ingredients,
+        steps,
+        category,
+      })
       .eq("id", recipe.id);
 
     if (error) {
@@ -36,22 +41,7 @@ export default function EditRecipe({ route, navigation }: any) {
       return;
     }
 
-    Alert.alert("Success", "Recipe updated!");
-    navigation.goBack();
-  };
-
-  const deleteRecipe = async () => {
-    const { error } = await supabase
-      .from("recipes")
-      .delete()
-      .eq("id", recipe.id);
-
-    if (error) {
-      Alert.alert("Error", error.message);
-      return;
-    }
-
-    Alert.alert("Deleted", "Recipe deleted successfully");
+    Alert.alert("Success", "Recipe updated");
     navigation.goBack();
   };
 
@@ -99,8 +89,12 @@ export default function EditRecipe({ route, navigation }: any) {
           >
             <Text
               style={{
+<<<<<<< HEAD
                 color: category === item ? "#FFFFFF" : "#4B3248",
                 fontWeight: "700",
+=======
+                color: category === item ? "#fff" : "#333",
+>>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
               }}
             >
               {item}
@@ -109,10 +103,34 @@ export default function EditRecipe({ route, navigation }: any) {
         ))}
       </View>
 
-      <TouchableOpacity style={styles.saveBtn} onPress={updateRecipe}>
-        <Text style={styles.saveText}>Update Recipe</Text>
-      </TouchableOpacity>
+      <View style={{ flexDirection: "row", marginTop: 10 }}>
 
+  {/* UPDATE BUTTON */}
+  <TouchableOpacity
+    style={[styles.saveBtn, { flex: 1, marginRight: 8 }]}
+    onPress={updateRecipe}
+  >
+    <Text style={styles.saveText}>Update Recipe</Text>
+  </TouchableOpacity>
+
+  {/* CANCEL BUTTON */}
+  <TouchableOpacity
+    style={[
+      styles.deleteBtn,
+      {
+        flex: 1,
+        marginTop: 0,
+        backgroundColor: "#9e9e9e",
+      },
+    ]}
+    onPress={() => navigation.goBack()}
+  >
+    <Text style={styles.deleteText}>Cancel</Text>
+  </TouchableOpacity>
+
+</View>
+
+<<<<<<< HEAD
       <TouchableOpacity
         style={styles.deleteBtn}
         onPress={() =>
@@ -128,6 +146,8 @@ export default function EditRecipe({ route, navigation }: any) {
       >
         <Text style={styles.deleteText}>Delete Recipe</Text>
       </TouchableOpacity>
+=======
+>>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
     </ScrollView>
   );
 }
@@ -143,27 +163,42 @@ const styles = StyleSheet.create({
   },
 
   header: {
+<<<<<<< HEAD
     fontSize: 28,
     fontWeight: "800",
+=======
+    fontSize: 26,
+    fontWeight: "bold",
+>>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
     marginBottom: 18,
     color: "#4B3248",
   },
 
   label: {
+<<<<<<< HEAD
     fontWeight: "700",
     marginTop: 10,
     marginBottom: 8,
     color: "#4F9980",
+=======
+    fontWeight: "bold",
+    marginBottom: 10,
+>>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
   },
 
   input: {
     backgroundColor: "#FFFFFF",
     padding: 14,
+<<<<<<< HEAD
     borderRadius: 16,
     marginBottom: 14,
     borderWidth: 1,
     borderColor: "#E8D9C8",
     color: "#4B3248",
+=======
+    borderRadius: 15,
+    marginBottom: 14,
+>>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
   },
 
   categoryRow: {
@@ -173,7 +208,9 @@ const styles = StyleSheet.create({
   },
 
   catBtn: {
+    backgroundColor: "#ddd",
     paddingVertical: 10,
+<<<<<<< HEAD
     paddingHorizontal: 16,
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
@@ -181,6 +218,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderWidth: 1,
     borderColor: "#E8D9C8",
+=======
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 8,
+>>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
   },
 
   catActive: {
@@ -191,6 +234,7 @@ const styles = StyleSheet.create({
   saveBtn: {
     backgroundColor: "#FF7A00",
     padding: 16,
+<<<<<<< HEAD
     borderRadius: 18,
     alignItems: "center",
     marginTop: 10,
@@ -215,4 +259,25 @@ const styles = StyleSheet.create({
     color: "#FF7A00",
     fontWeight: "800",
   },
+=======
+    borderRadius: 20,
+    alignItems: "center",
+  },
+
+  saveText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+
+  deleteBtn: {
+  padding: 16,
+  borderRadius: 24,
+  alignItems: "center",
+},
+
+deleteText: {
+  color: "#fff",
+  fontWeight: "bold",
+},
+>>>>>>> a3167abd08f4a34d375c3f88a10dc2b916cb8012
 });
