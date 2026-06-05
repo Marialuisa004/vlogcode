@@ -23,7 +23,8 @@ export default function AddRecipe({ navigation }: any) {
   const categories = ["Breakfast", "Lunch", "Dinner", "Dessert"];
 
   const pickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
       Alert.alert("Permission required", "Allow access to photos");
@@ -43,6 +44,7 @@ export default function AddRecipe({ navigation }: any) {
   const uploadImage = async (uri: string) => {
     try {
       const fileName = `${Date.now()}.jpg`;
+
       const response = await fetch(uri);
       if (!response.ok) return null;
 
@@ -57,7 +59,9 @@ export default function AddRecipe({ navigation }: any) {
 
       if (error) return null;
 
-      const { data } = supabase.storage.from("recipe-images").getPublicUrl(fileName);
+      const { data } = supabase.storage
+        .from("recipe-images")
+        .getPublicUrl(fileName);
 
       return data.publicUrl;
     } catch (e) {
@@ -66,32 +70,25 @@ export default function AddRecipe({ navigation }: any) {
   };
 
   const addRecipe = async () => {
-    if (loading) return;
-
-    if (
-      !title.trim() ||
-      !ingredients.trim() ||
-      !steps.trim() ||
-      !category.trim() ||
-      !image
-    ) {
+    if (!title || !ingredients || !steps || !category || !image) {
       Alert.alert("Missing Fields", "Please complete all fields");
       return;
     }
 
-    setLoading(true);
     try {
+      setLoading(true);
+
       const imageUrl = await uploadImage(image);
       if (!imageUrl) {
-        Alert.alert("Upload Failed", "Could not upload image");
+        Alert.alert("Error", "Image upload failed");
         return;
       }
 
       const { error } = await supabase.from("recipes").insert([
         {
-          title: title.trim(),
-          ingredients: ingredients.trim(),
-          steps: steps.trim(),
+          title,
+          ingredients,
+          steps,
           category,
           image: imageUrl,
         },
@@ -102,10 +99,8 @@ export default function AddRecipe({ navigation }: any) {
         return;
       }
 
-      Alert.alert("Success", "Recipe saved successfully!");
-      navigation.navigate("Home");
-    } catch (err: any) {
-      Alert.alert("Error", err?.message || "Something went wrong");
+      Alert.alert("Success", "Recipe added!");
+      navigation.goBack();
     } finally {
       setLoading(false);
     }
@@ -166,7 +161,9 @@ export default function AddRecipe({ navigation }: any) {
       </View>
 
       <TouchableOpacity style={styles.imageBtn} onPress={pickImage}>
-        <Text style={{ color: "#fff", fontWeight: "700" }}>Pick Image</Text>
+        <Text style={{ color: "#fff", fontWeight: "700" }}>
+          Pick Image
+        </Text>
       </TouchableOpacity>
 
       {image && <Image source={{ uri: image }} style={styles.preview} />}
@@ -184,6 +181,9 @@ export default function AddRecipe({ navigation }: any) {
   );
 }
 
+/* =========================
+   THEME DESIGN
+========================= */
 const styles = StyleSheet.create({
   container: {
     flex: 1,

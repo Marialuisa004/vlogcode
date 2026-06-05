@@ -10,7 +10,7 @@ import {
   ScrollView,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { supabase } from "../lib/supabase";
+import { supabase } from "./lib/supabase";
 
 export default function AddRecipe({ navigation }: any) {
   const [title, setTitle] = useState("");
