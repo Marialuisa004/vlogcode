@@ -30,7 +30,8 @@ type Recipe = {
   ingredients: string;
   category: string;
   steps?: string;
-  user_id?: string;
+  user_id?: number;
+  created_at?: string;
 };
 
 export default function Home({ navigation }: any) {
@@ -52,62 +53,90 @@ export default function Home({ navigation }: any) {
   };
 
   const normalizeRecipe = (d: any): Recipe => ({
-    ...d,
-    id: String(d.id),
-    title: String(d.title ?? ""),
-    image: String(d.image ?? ""),
-    ingredients: String(d.ingredients ?? ""),
-    category: String(d.category ?? ""),
-    steps: d.steps ? String(d.steps) : "",
-    user_id: d.user_id ? String(d.user_id) : "",
-  });
+  id: String(d.id),
+  title: String(d.title ?? ""),
+  image: String(d.image ?? ""),
+  ingredients: String(d.ingredients ?? ""),
+  category: String(d.category ?? ""),
+  steps: String(d.steps ?? ""),
+  user_id: Number(d.user_id ?? 0),
+});
+ 
+   const fetchRecipes = async () => {
+  setLoading(true);
 
-  const fetchRecipes = async () => {
-    setLoading(true);
+  try {
+    // Get the logged-in user from AsyncStorage
+    const storedUser = await AsyncStorage.getItem("user");
 
-    const { data } = await supabase
+    if (!storedUser) {
+      console.log("No logged-in user found.");
+      setLoading(false);
+      return;
+    }
+
+    const user = JSON.parse(storedUser);
+
+    console.log("Current User:", user);
+
+    // Fetch only this user's recipes
+    const { data, error } = await supabase
       .from("recipes")
       .select("*")
+      .eq("user_id", user.id)
       .order("id", { ascending: false });
 
+    if (error) {
+      console.log("Fetch Error:", error);
+      setLoading(false);
+      return;
+    }
+
     const normalized = (data || []).map(normalizeRecipe);
+
     setRecipes(normalized);
     setFiltered(normalized);
-
+  } catch (err) {
+    console.log("Error:", err);
+  } finally {
     setLoading(false);
-  };
+  }
+};
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchRecipes();
-    }, [])
-  );
+useFocusEffect(
+  useCallback(() => {
+    fetchRecipes();
+  }, [])
+);
 
-  useEffect(() => {
-    let next = recipes;
+useEffect(() => {
+  let next = recipes;
 
-    if (selectedCategory !== "All") {
-      next = next.filter(
-        (r) => r.category?.toLowerCase() === selectedCategory.toLowerCase()
-      );
-    }
+  if (selectedCategory !== "All") {
+    next = next.filter(
+      (r) =>
+        r.category.toLowerCase() ===
+        selectedCategory.toLowerCase()
+    );
+  }
 
-    if (search) {
-      const t = search.toLowerCase();
-      next = next.filter(
-        (r) =>
-          r.title.toLowerCase().includes(t) ||
-          r.ingredients.toLowerCase().includes(t)
-      );
-    }
+  if (search.trim()) {
+    const text = search.toLowerCase();
 
-    setFiltered(next);
-  }, [recipes, search, selectedCategory]);
+    next = next.filter(
+      (r) =>
+        r.title.toLowerCase().includes(text) ||
+        r.ingredients.toLowerCase().includes(text)
+    );
+  }
+
+  setFiltered(next);
+}, [recipes, search, selectedCategory]);
 
   const logout = async () => {
-    await AsyncStorage.removeItem("user");
-    navigation.replace("Login");
-  };
+  await AsyncStorage.removeItem("user");
+  navigation.replace("Login");
+};
 
   const AnimatedImage = ({ uri }: { uri: string }) => {
     const scale = useSharedValue(0.9);

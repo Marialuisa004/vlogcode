@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "../lib/supabase";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function AddRecipe({ navigation }: any) {
   const [title, setTitle] = useState("");
@@ -19,6 +20,7 @@ export default function AddRecipe({ navigation }: any) {
   const [category, setCategory] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+   
 
   const categories = ["Breakfast", "Lunch", "Dinner", "Dessert"];
 
@@ -70,41 +72,78 @@ export default function AddRecipe({ navigation }: any) {
   };
 
   const addRecipe = async () => {
-    if (!title || !ingredients || !steps || !category || !image) {
-      Alert.alert("Missing Fields", "Please complete all fields");
+  console.log("Save button pressed");
+
+  if (!title || !ingredients || !steps || !category || !image) {
+    Alert.alert("Missing Fields", "Please complete all fields");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    // Upload image
+    const imageUrl = await uploadImage(image);
+    console.log("Image URL:", imageUrl);
+
+    if (!imageUrl) {
+      Alert.alert("Error", "Image upload failed");
       return;
     }
 
-    try {
-      setLoading(true);
+    // Get the logged-in user from AsyncStorage
+        const storedUser = await AsyncStorage.getItem("user");
 
-      const imageUrl = await uploadImage(image);
-      if (!imageUrl) {
-        Alert.alert("Error", "Image upload failed");
-        return;
-      }
+        if (!storedUser) {
+          Alert.alert("Error", "No logged-in user found.");
+          return;
+        }
 
-      const { error } = await supabase.from("recipes").insert([
+        const user = JSON.parse(storedUser);
+
+        console.log("Logged-in user:", user);
+
+    console.log("Inserting recipe...");
+
+    const { data, error } = await supabase
+      .from("recipes")
+      .insert([
         {
           title,
           ingredients,
           steps,
           category,
           image: imageUrl,
+          user_id: user.id,
         },
-      ]);
+      ])
+      .select();
 
-      if (error) {
-        Alert.alert("Error", error.message);
-        return;
-      }
+    console.log("Inserted Data:", data);
+    console.log("Insert Error:", error);
 
-      Alert.alert("Success", "Recipe added!");
-      navigation.goBack();
-    } finally {
-      setLoading(false);
+    if (error) {
+      Alert.alert("Insert Error", error.message);
+      return;
     }
-  };
+
+    Alert.alert("Success", "Recipe added successfully!");
+
+    // Clear the form
+    setTitle("");
+    setIngredients("");
+    setSteps("");
+    setCategory("");
+    setImage(null);
+
+    navigation.goBack();
+  } catch (err: any) {
+    console.log("Catch Error:", err);
+    Alert.alert("Unexpected Error", err.message || "Something went wrong.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <ScrollView style={styles.container}>

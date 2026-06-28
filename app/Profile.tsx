@@ -40,26 +40,40 @@ export default function Profile() {
 
   // 💾 SAVE PROFILE (FIXED)
   const saveProfile = async () => {
+    console.log("Saving profile");
+
     if (!username || !email) {
       Alert.alert("Error", "Username and email required");
       return;
     }
+    
+  console.log("User:", user);
+  console.log("Updating ID:", user?.id);
 
-    setSaving(true);
+  if (!username || !email) {
+    Alert.alert("Error", "Username and email required");
+    return;
+  }
 
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          username,
-          email,
-        })
-        .eq("id", user.id);
+  setSaving(true);
 
-      if (error) {
-        Alert.alert("Error", error.message);
-        return;
-      }
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({
+        username,
+        email,
+      })
+      .eq("id", user.id)
+      .select();
+
+    console.log("Updated data:", data);
+    console.log("Update error:", error);
+
+    if (error) {
+      Alert.alert("Error", error.message);
+      return;
+    }
 
       // OPTIONAL PASSWORD UPDATE
       if (password.length > 0) {
