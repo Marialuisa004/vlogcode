@@ -15,6 +15,7 @@ import {
 import { supabase } from "../lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+
 const bgImage = require("../assets/image.png");
 const logoImage = require("../assets/logo.png");
 
@@ -60,26 +61,68 @@ export default function Register({ navigation }: any) {
 
 
   const register = async () => {
-    if (!username || !password) {
-      Alert.alert("Error", "Fill all fields");
+  try {
+    // Check if all fields are filled
+    if (!username.trim() || !password.trim()) {
+      Alert.alert("Error", "Please fill in all fields.");
       return;
     }
 
-    const { error } = await supabase.from("users").insert([
-      {
-        username,
-        password,
-      },
-    ]);
+    // Optional: Require at least 6 characters
+    if (password.length < 6) {
+      Alert.alert(
+        "Invalid Password",
+        "Password must be at least 6 characters long."
+      );
+      return;
+    }
 
+    console.log("Registering user...");
+
+    const { data, error } = await supabase
+      .from("users")
+      .insert([
+        {
+          username: username.trim(),
+          password: password.trim(),
+        },
+      ])
+      .select();
+
+    // Show the actual Supabase error
     if (error) {
-      Alert.alert("Error", "Username already exists");
+      console.log("Supabase Error:", error);
+
+      Alert.alert(
+        "Registration Failed",
+        error.message
+      );
+
       return;
     }
 
-    Alert.alert("Success", "Account created");
-    navigation.navigate("Login");
-  };
+    console.log("Inserted user:", data);
+
+    Alert.alert(
+      "Success",
+      "Account created successfully!",
+      [
+        {
+          text: "OK",
+          // After successful registration, go directly to Login
+          onPress: () => navigation.replace("Login"),
+        },
+      ]
+    );
+  } catch (err: any) {
+    console.log("Unexpected Error:", err);
+
+    Alert.alert(
+      "Unexpected Error",
+      err?.message || "Something went wrong. Please try again."
+    );
+  }
+};
 
   return (
     <ImageBackground

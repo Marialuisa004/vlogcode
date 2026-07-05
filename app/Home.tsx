@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   TextInput,
   ActivityIndicator,
   ScrollView,
+  Alert,
 } from "react-native";
 
 import Animated, {
@@ -109,34 +110,55 @@ useFocusEffect(
   }, [])
 );
 
-useEffect(() => {
-  let next = recipes;
 
-  if (selectedCategory !== "All") {
-    next = next.filter(
-      (r) =>
-        r.category.toLowerCase() ===
-        selectedCategory.toLowerCase()
-    );
-  }
 
-  if (search.trim()) {
-    const text = search.toLowerCase();
-
-    next = next.filter(
-      (r) =>
-        r.title.toLowerCase().includes(text) ||
-        r.ingredients.toLowerCase().includes(text)
-    );
-  }
-
-  setFiltered(next);
-}, [recipes, search, selectedCategory]);
-
-  const logout = async () => {
+ const logout = async () => {
   await AsyncStorage.removeItem("user");
   navigation.replace("Login");
 };
+
+// DELETE FUNCTION
+const deleteRecipe = async (id: string) => {
+  Alert.alert(
+    "Delete Recipe",
+    "Are you sure you want to delete this recipe?",
+    [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          const { error } = await supabase
+            .from("recipes")
+            .delete()
+            .eq("id", id);
+
+          if (error) {
+            Alert.alert("Error", error.message);
+            return;
+          }
+
+          setRecipes((prev) => prev.filter((recipe) => recipe.id !== id));
+
+          Alert.alert("Success", "Recipe deleted successfully.");
+        },
+      },
+    ]
+  );
+};
+
+// 👇 PUT THE EDIT FUNCTION HERE
+const editRecipe = (recipe: Recipe) => {
+  navigation.navigate("EditRecipe", {
+    recipe,
+  });
+};
+
+
+
 
   const AnimatedImage = ({ uri }: { uri: string }) => {
     const scale = useSharedValue(0.9);
@@ -170,11 +192,24 @@ useEffect(() => {
       </View>
     );
   }
+   const filteredData = recipes.filter((r) => {
+  const matchesCategory =
+    selectedCategory === "All" ||
+    r.category.toLowerCase() === selectedCategory.toLowerCase();
+
+  const text = search.toLowerCase();
+
+  const matchesSearch =
+    r.title.toLowerCase().includes(text) ||
+    r.ingredients.toLowerCase().includes(text);
+
+  return matchesCategory && matchesSearch;
+});
 
   return (
     <View style={styles.container}>
       <FlatList
-        data={filtered}
+        data={filteredData}
         keyExtractor={(i) => i.id}
         contentContainerStyle={{ paddingBottom: 120 }}
         ListHeaderComponent={() => (
@@ -186,6 +221,12 @@ useEffect(() => {
                 value={search}
                 onChangeText={setSearch}
                 style={styles.search}
+                autoCorrect={false}
+                autoCapitalize="none"
+                blurOnSubmit={false}
+                // Fix: avoid losing focus / cancelling input on re-renders
+                // (especially when list updates while typing)
+                clearButtonMode="while-editing"
               />
 
               <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
@@ -235,6 +276,22 @@ useEffect(() => {
               <AnimatedImage uri={item.image} />
 
               <View style={styles.cardContent}>
+                {/* ACTION BUTTONS */}
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity
+                      style={styles.editBtn}
+                      onPress={() => editRecipe(item)}
+                    >
+                      <Text style={styles.editText}>Edit</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.deleteBtn}
+                      onPress={() => deleteRecipe(item.id)}
+                    >
+                      <Text style={styles.deleteText}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
                 <Text style={styles.title}>{item.title}</Text>
                 <Text style={styles.category}>{item.category}</Text>
 
@@ -418,4 +475,37 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginTop: 10,
   },
+
+  actionRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  marginTop: 15,
+},
+
+editBtn: {
+  flex: 1,
+  backgroundColor: "#4F9980",
+  padding: 10,
+  borderRadius: 12,
+  marginRight: 8,
+  alignItems: "center",
+},
+
+editText: {
+  color: "#fff",
+  fontWeight: "800",
+},
+
+deleteBtn: {
+  flex: 1,
+  backgroundColor: "#E53935",
+  padding: 10,
+  borderRadius: 12,
+  alignItems: "center",
+},
+
+deleteText: {
+  color: "#fff",
+  fontWeight: "800",
+},
 });

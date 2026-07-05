@@ -10,12 +10,13 @@ import Register from "./app/Register";
 import Home from "./app/Home";
 import AddRecipe from "./app/addRecipe";
 import EditRecipe from "./app/EditRecipe";
+import Profile from "./app/Profile";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 /* =========================
-   BOTTOM TABS (HOME + ADD)
+   BOTTOM TABS
 ========================= */
 function Tabs() {
   return (
@@ -24,16 +25,15 @@ function Tabs() {
         headerShown: false,
         tabBarActiveTintColor: "#ff6347",
         tabBarInactiveTintColor: "gray",
-
         tabBarIcon: ({ color, size }) => {
           let iconName: any;
 
           if (route.name === "Home") {
-            iconName = "home"; // 🏠
+            iconName = "home";
           } else if (route.name === "Add Recipe") {
-            iconName = "add-circle"; // ➕
+            iconName = "add-circle";
           } else if (route.name === "Profile") {
-            iconName = "person"; // 👤
+            iconName = "person";
           }
 
           return (
@@ -42,19 +42,9 @@ function Tabs() {
         },
       })}
     >
-      <Tab.Screen
-        name="Home"
-        component={Home}
-      />
-
-      <Tab.Screen
-        name="Add Recipe"
-        component={AddRecipe}
-      />
-        <Tab.Screen
-        name="Profile"
-        component={require("./app/Profile").default}
-        />
+      <Tab.Screen name="Home" component={Home} />
+      <Tab.Screen name="Add Recipe" component={AddRecipe} />
+      <Tab.Screen name="Profile" component={Profile} />
     </Tab.Navigator>
   );
 }
@@ -67,17 +57,14 @@ export default function App() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
 
-        {/* AUTH SCREENS */}
+        {/* AUTH */}
         <Stack.Screen name="Login" component={Login} />
         <Stack.Screen name="Register" component={Register} />
 
-        {/* MAIN APP (TABS) */}
+        {/* MAIN APP */}
         <Stack.Screen name="Main" component={Tabs} />
 
-        {/* PROFILE (NO TAB) */}
-        <Stack.Screen name="Profile" component={require("./app/Profile").default} />
-
-        {/* EDIT SCREEN (NO TAB) */}
+        {/* EDIT SCREEN (IMPORTANT) */}
         <Stack.Screen name="EditRecipe" component={EditRecipe} />
 
       </Stack.Navigator>
